@@ -47,6 +47,26 @@ When the generated executable is run, it will print out a line for any failed te
 	./pseudo_float_test 
 	Tests done, passed 3863863/3863863
 
+## Overflows
+
+There is an error value (PF_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
+
+There are three macros that can be set to determine the behaviour in these cases:
+
+PF_DO_ERROR_OVERFLOW  
+C default: return PF_NAN  
+C++ default: throw std::overflow_error("overflow")
+
+PF_DO_ERROR_UNDERFLOW  
+C default: return 0  
+C++ default: return PseudoFloat(0)
+
+PF_DO_ERROR_RANGE  
+C default: return PF_NAN  
+C++ default: throw std::range_error("range")
+
+NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so in C it should be checked for explicitly after any calculation that might generate that value.
+
 ## Design Considerations
 
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.
@@ -81,11 +101,10 @@ Pseudo floats have a 48 bit signed mantissa (no bits removed), and a 16 bit expo
 	6666555555555544444444443333333333222222222211111111110000000000
 	3210987654321098765432109876543210987654321098765432109876543210
 
-A number is represented as m*2^(e-16383) where m is a signed fixed point, -0.5<=m<0.5
+A number is represented as m*2^(e-16384) where m is a signed fixed point, -0.5<=m<0.5
 0 is represented by all zeros, there is no -0.
 There is an overflow value represented by all 1 bits. It is is returned in cases where an overflow, infinity or error happens.
 
-Design considerations:
 * 48 bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.
 * a signed mantissa rather than a separate sign bit means less branching and they are more predictable.
 * putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be does by looking at the integer values.
@@ -112,29 +131,7 @@ This process is reversed for negating a negative power of two.
 
 The upside is that because this case only occurs with power of two or negative power of two, this case is likely to be rarer than the other cases, which will improve branch prediction.
 
-Overflows
----------
-
-There is an error value (PF_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
-
-There are three macros that can be set to determine the behaviour in these cases:
-
-PF_DO_ERROR_OVERFLOW  
-C default: return PF_NAN  
-C++ default: throw std::overflow_error("overflow")
-
-PF_DO_ERROR_UNDERFLOW  
-C default: return 0  
-C++ default: return PseudoFloat(0)
-
-PF_DO_ERROR_RANGE  
-C default: return PF_NAN  
-C++ default: throw std::range_error("range")
-
-NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so in C it should be checked for explicitly after any calculation that might generate that value.
-
-Other notes
------------
+## Other notes
 
 The constants used for generating transcendental functions were generated using lolremez (https://github.com/samhocevar/lolremez) which is an implementation of the Remez algorithm (https://en.wikipedia.org/wiki/Remez_algorithm). the lolremez commands and results are included as comments in the code. Adjustments were then made:
 * integers are used rather than floating point
