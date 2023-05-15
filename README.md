@@ -68,6 +68,7 @@ Pseudo Floats are intended to give precision, range and consistency while sacrif
 Because this runs on a CPU using integer instructions rather than dedicated hardware, different choices are made for the storage format than IEE 754.
 
 An IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 bit unsigned mantissa with the most significant bit removed:
+
 	seeeeeeeeeeemmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 	6666555555555544444444443333333333222222222211111111110000000000
 	3210987654321098765432109876543210987654321098765432109876543210
@@ -75,6 +76,7 @@ An IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 bit unsigned ma
 0 is represented by all zeros, -0 is represented by a 1 sign bit, the rest zero.
 
 Pseudo floats have a 48 bit signed mantissa (no bits removed), and a 16 bit exponent:
+
 	mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmeeeeeeeeeeeeeeee
 	6666555555555544444444443333333333222222222211111111110000000000
 	3210987654321098765432109876543210987654321098765432109876543210
