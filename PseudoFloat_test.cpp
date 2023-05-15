@@ -48,6 +48,8 @@ bool compare(double d1, double d2, double exactness) {
 uint64_t atan_rev_64_internal(uint64_t x);
 
 int main() {
+	uint32_t count=0;
+	uint32_t failures=0;
 	srand(0);
 	vector<double> list;
 	for(int i=-20;i<20;i++) {
@@ -75,70 +77,59 @@ int main() {
 			PseudoFloat pf2=f2;
 			double ff;
 			ff=pf1+pf2;
+			count++;
 			if(!compare(f1+f2,ff,NEAR_EXACT8)) {
+				failures++;
 				cout << "add  " << f1 << '+' << f2 << "==" << f1+f2 << "!=" << ff << endl;
-				PseudoFloat pff=pf1+pf2;
-				debug_pf_output(pf1.get_internal());
-				cout << endl;
-				debug_pf_output(pf2.get_internal());
-				cout << endl;
-				debug_pf_output(pff.get_internal());
-				cout << endl;
-				__asm__("int3");
-				double ff=pf1+pf2;
-				cout << ff << endl;
 			}
 			ff=pf1-pf2;
+			count++;
 			if(!compare(f1-f2,ff,NEAR_EXACT8)) {
+				failures++;
 				cout << "sub  " << f1 << '-' << f2 << "==" << f1-f2 << "!=" << ff << endl;
 			}
 			ff=pf1*pf2;
+			count++;
 			if(!compare(f1*f2,ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "mult " << f1 << '*' << f2 << "==" << f1*f2 << "!=" << ff << endl;
 			}
 			if(f2!=0) {
+				count++;
 				ff=pf1/pf2;
 				if(!compare(f1/f2,ff,NEAR_EXACT13)) {
+					failures++;
 					cout << "div  " << f1 << '/' << f2 << "==" << f1/f2 << "!=" << ff << endl;
 				}
 			}
+			count++;
 			if((f1<f2) != (pf1<pf2)) {
+				failures++;
 				cout << "comp " << f1 << "<" << f2 << "==" << (int)(f1<f2) << "!=" << (int)(pf1<pf2) << endl;
 			}
+			count++;
 			if((f1<=f2) != (pf1<=pf2)) {
+				failures++;
 				cout << "comp " << f1 << "<=" << f2 << "==" << (int)(f1<=f2) << "!=" << (int)(pf1<=pf2) << endl;
 			}
+			count++;
 			if((f1>f2) != (pf1>pf2)) {
+				failures++;
 				cout << "comp " << f1 << ">" << f2 << "==" << (int)(f1>f2) << "!=" << (int)(pf1>pf2) << endl;
-// 				debug_pf_output(pf1.get_internal());
-// 				cout << endl;
-// 				debug_pf_output(pf2.get_internal());
-// 				cout << endl;
-// 				__asm__("int3");
-// 				bool t=(pf1>pf2);
-// 				cout << t << endl;
 			}
+			count++;
 			if((f1>=f2) != (pf1>=pf2)) {
+				failures++;
 				cout << "comp " << f1 << ">=" << f2 << "==" << (int)(f1>=f2) << "!=" << (int)(pf1>=pf2) << endl;
 			}
+			count++;
 			ff=atan2(pf1,pf2);
 			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT4)) && (f1>=0 || f2!=0)) {
+				failures++;
 				cout << "atan2(" << f1 << ',' << f2 << ")==" << atan2(f1,f2) << "!=" << ff << endl;
 			}
 		}
 	}
-// 	for(int32_t i1=-2;i1<=2;i1++) {
-// 		for(int32_t i2=-2;i2<=2;i2++) {
-// 			PseudoFloat pf1=i1;
-// 			PseudoFloat pf2=i2;
-// 			double ff=atan2(pf1,pf2);
-// 			if(!compare(atan2((double)i1,(double)i2),ff,NEAR_EXACT13)) {
-// 				cout << "atan2(" << i1 << ',' << i2 << ")==" << atan2((double)i1,(double)i2) << "!=" << ff << endl;
-// 				__asm__("int3");
-// 				atan2(pf1,pf2);
-// 			}
-// 		}
-// 	}
 	for(int i=-20;i<20;i++) {
 		list.push_back(i+0.4999999);
 		list.push_back(i+0.5000001);
@@ -147,109 +138,105 @@ int main() {
 		double f=list[i];
 		PseudoFloat pf=f;
 		double ff=pf;
+		count++;
 		if(!compare(f,ff,NEAR_EXACT13)) {
+			failures++;
 			cout << "conv " << f << ' ' << ff << endl;
 		}
 		ff=-pf;
+		count++;
 		if(!compare(-f,ff,NEAR_EXACT13)) {
+			failures++;
 			cout << "neg  " << -f << ' ' << ff << endl;
 		}
 		if(f>0) {
+			count++;
 			ff=inv_sqrt(pf);
 			if(!compare(1.0/sqrt(f),ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "inv_sqrt  " << 1.0/sqrt(f) << ' ' << ff << endl;
-// 				__asm__("int3");
-// 				ff=inv_sqrt(pf);
 			}
 		}
 		if(f>0) {
+			count++;
 			ff=sqrt(pf);
 			if(!compare(sqrt(f),ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "sqrt  " << sqrt(f) << ' ' << ff << endl;
-// 				__asm__("int3");
-// 				ff=sqrt(pf);
 			}
 		}
 		ff=floor(pf);
+		count++;
 		if(!compare(floor(f),ff,NEAR_EXACT13)) {
+			failures++;
 			cout << "floor  " << floor(f) << ' ' << ff << endl;
-			__asm__("int3");
-			ff=floor(pf);
 		}
 		ff=ceil(pf);
+		count++;
 		if(!compare(ceil(f),ff,NEAR_EXACT13)) {
+			failures++;
 			cout << "ceil  " << ceil(f) << ' ' << ff << endl;
-// 			__asm__("int3");
-// 			ff=ceil(pf);
 		}
 		ff=round(pf);
+		count++;
 		if(!compare(round(f),ff,NEAR_EXACT13)) {
+			failures++;
 			cout << "round  " << round(f) << ' ' << ff << endl;
-// 				__asm__("int3");
-// 				ff=round(pf);
 		}
-		//cout << f << ':' << pf.get_internal() << endl;
 		if(!isinf(exp2(f)) && f!=-1024.0) {
+			count++;
 			ff=exp2(pf);
 			if(!compare(exp2(f),ff,NEAR_EXACT12)) {
+				failures++;
 				cout << "exp2  " << setprecision(15) << f << ' ' << setprecision(15) << exp2(f) << ' ' << setprecision(15) << ff << endl;
-// 				__asm__("int3");
-// 				pf=exp2(pf);
-// 				f=pf;
 			}
 		}
 		if(!isinf(exp(f))) {
 			ff=exp(pf);
+			count++;
 			if(!compare(exp(f),ff,NEAR_EXACT11)) {
+				failures++;
 				cout << "exp  " << setprecision(15) << f << ' ' << setprecision(15) << exp(f) << ' ' << setprecision(15) << ff << endl;
-// 				__asm__("int3");
-// 				pf=exp(pf);
-// 				f=pf;
 			}
 		}
 		if(f>0) {
 			ff=log2(pf);
+			count++;
 			if(!compare(log2(f),ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "log2  " << setprecision(15) << f << ' ' << setprecision(15) << log2(f) << ' ' << setprecision(15) << ff << endl;
-// 				__asm__("int3");
-// 				pf=log2(pf);
-// 				f=pf;
 			}
 		}
 		if(f>0) {
 			ff=log(pf);
+			count++;
 			if(!compare(log(f),ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "log  " << setprecision(15) << f << ' ' << setprecision(15) << log(f) << ' ' << setprecision(15) << ff << endl;
-// 				__asm__("int3");
-// 				pf=log(pf);
-// 				f=pf;
 			}
 		}
 		if(f>0) {
 			ff=log10(pf);
+			count++;
 			if(!compare(log10(f),ff,NEAR_EXACT13)) {
+				failures++;
 				cout << "log10  " << setprecision(15) << f << ' ' << setprecision(15) << log10(f) << ' ' << setprecision(15) << ff << endl;
-// 				__asm__("int3");
-// 				pf=log10(pf);
-// 				f=pf;
 			}
 		}
 		if(-10000.0<f && f<10000.0) {
 			ff=sin(pf);
+			count++;
 			if(!compare(sin(f),ff,NEAR_EXACT10)) {
+				failures++;
 				cout << "sin  " << f << ' ' << sin(f) << ' ' << ff << endl;
 			}
 			ff=cos(pf);
+			count++;
 			if(!compare(cos(f),ff,NEAR_EXACT10)) {
+				failures++;
 				cout << "cos  " << f << ' ' << cos(f) << ' ' << ff << endl;
-					__asm__("int3");
-					ff=cos(pf);
 			}
 		}
-		//pf_log2(pf.get_internal());
-// 		ff=exp2(pf);
-// 		cout << f << ' ' << exp2(f) << ' ' << ff << endl;
-// 		exp2(pf);
 	}
 	for(uint32_t i=0;i<list.size();i++) {
 		double f1=list[i];
@@ -260,18 +247,10 @@ int main() {
 				PseudoFloat pf2=f2;
 				double ff;
 				ff=pow(pf1,pf2);
+				count++;
 				if(!compare(pow(f1,f2),ff,NEAR_EXACT9)) {
+					failures++;
 					cout << "pow(" << f1 << ',' << f2 << ")==" << pow(f1,f2) << "!=" << ff << endl;
-// 					PseudoFloat pff=pow(pf1,pf2);
-// 					debug_pf_output(pf1.get_internal());
-// 					cout << endl;
-// 					debug_pf_output(pf2.get_internal());
-// 					cout << endl;
-// 					debug_pf_output(pff.get_internal());
-// 					cout << endl;
-// 					__asm__("int3");
-// 					double ff=pow(pf1,pf2);
-// 					cout << ff << endl;
 				}
 			}
 		}
@@ -279,58 +258,26 @@ int main() {
 	for(int64_t i=-1000;i<1000;i++) {
 		PseudoFloat pf(i);
 		int64_t ii=pf;
+		count++;
 		if(i!=ii) {
+			failures++;
 			cout << "sint convert" << i << ' ' << ii << endl;
 		}
 	}
 	for(uint64_t i=0;i<1000;i++) {
 		PseudoFloat pf(i);
 		uint64_t ii=pf;
+		count++;
 		if(i!=ii) {
+			failures++;
 			cout << "uint convert" << i << ' ' << ii << endl;
 		}
 	}
-	cout << "Tests done" << endl;
-// 	for(uint32_t i=0;i<21;i++) {
-// 		cout << i << ' ' << ldexp(pf_atan2_rev(sint64_to_pf(i),sint64_to_pf(20)),-62) << endl;
-// 	}
-// 	for(uint32_t i=0;i<257;i++) {
-// 		uint64_t x=0x3FFFFFFFFFFFFF00ULL+i;
-// 		uint64_t p0=atan_rev_64_internal(x);
-// 		cout << hex << x << ' ' << p0 << endl;
-// 	}
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL*0.0),-62) << ' ' << atan(0.0)*4/M_PI << endl;
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL*0.2),-62) << ' ' << atan(0.2)*4/M_PI << endl;
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL*0.4),-62) << ' ' << atan(0.4)*4/M_PI << endl;
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL*0.6),-62) << ' ' << atan(0.6)*4/M_PI << endl;
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL*0.8),-62) << ' ' << atan(0.8)*4/M_PI << endl;
-// 	cout << ldexp(atan_rev_64_internal(0x4000000000000000ULL),-62)     << ' ' << atan(1.0)*4/M_PI << endl;
-// 	for(int i=-500;i<500;i++) {
-// 		double d=i/100.0;
-// 		PseudoFloat dd=d;
-// 		cout << d << ' ' << sin(dd) << endl;
-// 	}
-// 	cout << '$' << endl;
-// 	cout << PF_PI << endl;
-// 	cout << PF_INV_TAU << endl;
-// 	cout << PF_get_fixed2(PF_PI,10) << endl;
-// 	cout << setprecision(12) << PF_create_fixed2(1234567,-10) << endl;
-// 	cout << setprecision(12) << PF_get_fixed2(PF_create_fixed2(1234567,-10),-10) << endl;
+	cout << "Tests done, passed " << (count-failures) << '/' << count << endl;
 
-// C/C++: uint64_t inv_sqrt64_internal(uint64_t x);
-// calculate 1/sqrt(x)
-// x is a 2.62 unsigned fixed in the range (1,4)
-// result is 1.63 unsigned fixed in the range (0.5,1)
-// 
-// C/C++: uint64_t exp2_64_internal(uint64_t x);
-// calculate 2^x
-// x is a 0.64 unsigned fixed in the range [0,1)
-// result is 2.62 unsigned fixed in the range [1,2)
-// 
-
-
-	for(uint64_t i=0x4000000000000000ULL;i<=0xFF00000000000000ULL;i+=0x40000000000000ULL) {
-		cout << hex << i << ' ' << inv_sqrt64_internal(i) << dec << endl;
-	}
+// This can be modified to test indivual internal functions
+// 	for(uint64_t i=0x4000000000000000ULL;i<=0xFF00000000000000ULL;i+=0x40000000000000ULL) {
+// 		cout << hex << i << ' ' << inv_sqrt64_internal(i) << dec << endl;
+// 	}
 	return 0;
 }
