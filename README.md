@@ -22,9 +22,9 @@ pseudo_float is aliased to uint64_t
 
 #### Files
 
-pseudo_float.h: file to include to access the C functionality. Some of the basic functions are provided by inline functions.
+**pseudo_float.h**: file to include to access the C functionality. Some of the basic functions are provided by inline functions.
 
-pseudo_float.c: Add this into your project. This includes the functionality not provided by pseudo_float.h
+**pseudo_float.c**: Add this into your project. This includes the functionality not provided by pseudo_float.h
 
 ### C++
 
@@ -32,11 +32,11 @@ PseudoFloat is provided as a class with operator overloading and function overlo
 
 #### Files
 
-PseudoFloat.h: file to include to access the C++ functionality
+**PseudoFloat.h**: file to include to access the C++ functionality
 
-pseudo_float.cpp: is just a C++ wrapper for pseudo_float.c
+**pseudo_float.cpp**: is just a C++ wrapper for pseudo_float.c
 
-PseudoFloat_test.cpp: a test file for the rest of the library. To build this do:
+**PseudoFloat_test.cpp**: a test file for the rest of the library. To build this do:
 
 #### Running the test
 
