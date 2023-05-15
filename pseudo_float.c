@@ -160,7 +160,7 @@ uint64_t pf_to_uint64(pseudo_float x) {
 
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
-uint64_t inv_sqrt64_internal(uint64_t x) {
+uint64_t inv_sqrt64_fixed(uint64_t x) {
 	// start with a linear interpolation correct at the endpoints
 	// 7/6 - 1/6 x, so 1->1, 4->0.5
 	uint64_t y=3074457345618258602ULL-multu64hi(x,12297829382473034410ULL);
@@ -224,7 +224,7 @@ pseudo_float pf_inv_sqrt(pseudo_float x) {
 			return mantissa+3*(PSEUDO_FLOAT_EXP_BIAS>>1)+3-(exponent>>1);
 		}
 	}
-	return (inv_sqrt64_internal(mantissa)&EXP_MASK_INV)+3*(PSEUDO_FLOAT_EXP_BIAS>>1)+2-(exponent>>1);;
+	return (inv_sqrt64_fixed(mantissa)&EXP_MASK_INV)+3*(PSEUDO_FLOAT_EXP_BIAS>>1)+2-(exponent>>1);;
 }
 
 pseudo_float pf_sqrt(pseudo_float x) {
@@ -245,7 +245,7 @@ pseudo_float pf_sqrt(pseudo_float x) {
 		}
 	}
 	// (1,4) * (1,0.5) = (1,2)
-	uint64_t y=multu64hi((inv_sqrt64_internal(mantissa>>(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS)),mantissa)<<1;
+	uint64_t y=multu64hi((inv_sqrt64_fixed(mantissa>>(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS)),mantissa)<<1;
 	//printf("%lx * %lx = %lx\n",inv_sqrt_internal(mantissa),mantissa,y);
 	return (y&EXP_MASK_INV)+(PSEUDO_FLOAT_EXP_BIAS>>1)+1+(exponent>>1);
 }
@@ -267,7 +267,7 @@ pseudo_float pf_sqrt(pseudo_float x) {
 
 // x is a 0.64 unsigned fixed in the range [0,1)
 // result is 2.62 unsigned fixed in the range [1,2)
-uint64_t exp2_64_internal(uint64_t x) {
+uint64_t exp2_64_fixed(uint64_t x) {
 	uint64_t u=184590982593ULL;
 	u=multu64hi(u,x)+1740251145362ULL;
 	u=multu64hi(u,x)+24568133950921ULL;
@@ -315,7 +315,7 @@ int64_t mults64hi(int64_t x,int64_t y) {
 // x is a 1.63 unsigned fixed in the range [0,1)
 // calculate ln2(x+1)
 // result is 1.63 unsigned fixed in the range [0,1)
-uint64_t log2_64_internal(uint64_t x) {
+uint64_t log2_64_fixed(uint64_t x) {
 	int64_t u=              -866184866458461LL*256;
 	u=mults64hi(u,x)       +9096620059073819LL*128;
 	u=mults64hi(u,x)      -45229346966063088LL*64;
@@ -346,7 +346,7 @@ pseudo_float pf_pow(pseudo_float x, pseudo_float y) {
 	int64_t exponent=(x&EXP_MASK);
 	int64_t e=exponent-PSEUDO_FLOAT_EXP_BIAS-2;
 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
-	uint64_t log_frac=log2_64_internal(mantissa);
+	uint64_t log_frac=log2_64_fixed(mantissa);
 	int64_t vx;
 	int64_t expx;
 	if(e==0) {
@@ -414,7 +414,7 @@ pseudo_float pf_pow(pseudo_float x, pseudo_float y) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pf_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
-	return newe+((exp2_64_internal(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
+	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
 
 }
 
@@ -425,7 +425,7 @@ pseudo_float pf_log2(pseudo_float x) {
 	int64_t exponent=(x&EXP_MASK);
 	int64_t e=exponent-PSEUDO_FLOAT_EXP_BIAS-2;
 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
-	uint64_t log_frac=log2_64_internal(mantissa);
+	uint64_t log_frac=log2_64_fixed(mantissa);
 	if(e==0) {
 		if(log_frac==0) {
 			return 0;
@@ -440,7 +440,7 @@ pseudo_float pf_log2(pseudo_float x) {
 	int negative=(e<0);
 	int lead_bits=clz(negative?~e:e);
 	return (((e<<(PSEUDO_FLOAT_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_FLOAT_EXP_BIAS+65-lead_bits;
-// 	printf("%16lx:%5.10f:%5.10f:%d:%16lx:%5.10f:%5.10f\n",x,pf_to_double(x),log2(pf_to_double(x)),e,mantissa,ldexp(1.0+ldexp(mantissa,-63),e),ldexp(log2_64_internal(mantissa),-63));
+// 	printf("%16lx:%5.10f:%5.10f:%d:%16lx:%5.10f:%5.10f\n",x,pf_to_double(x),log2(pf_to_double(x)),e,mantissa,ldexp(1.0+ldexp(mantissa,-63),e),ldexp(log2_64_fixed(mantissa),-63));
 // 	return 0;
 }
 
@@ -488,7 +488,7 @@ pseudo_float pf_exp2(pseudo_float x) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pf_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
-	return newe+((exp2_64_internal(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
+	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
 }
 
 pseudo_float pf_exp(pseudo_float x) {
@@ -524,9 +524,9 @@ pseudo_float pf_log10(pseudo_float x) {
 // }
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate sin_rev_64_internal(x)
+// calculate sin_rev_64_fixed(x)
 // result is 2.62 unsigned fixed in the range [0,1]
-uint64_t sin_rev_64_internal(uint64_t x) {
+uint64_t sin_rev_64_fixed(uint64_t x) {
     int64_t x2=mults64hi(x,x)<<2;
     int64_t u=                     -2967547018LL;
     u=mults64hi(u<<2,x2)         +262302065977LL;
@@ -572,7 +572,7 @@ pseudo_float pf_sin_rev(pseudo_float x) {
 	if(fraction>>62) {
 		fraction=0x8000000000000000ULL-fraction;
 	}
-	int64_t d=sin_rev_64_internal(fraction);
+	int64_t d=sin_rev_64_fixed(fraction);
 	if(d==0) {
 		return 0;
 	}
@@ -617,7 +617,7 @@ pseudo_float pf_cos_rev(pseudo_float x) {
 	if(fraction>>62) {
 		fraction=0x8000000000000000ULL-fraction;
 	}
-	int64_t d=sin_rev_64_internal(fraction);
+	int64_t d=sin_rev_64_fixed(fraction);
 	if(d==0) {
 		return 0;
 	}
@@ -661,9 +661,9 @@ pseudo_float pf_cos(pseudo_float x) {
 // }
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate atan_rev_64_internal(x)
+// calculate atan_rev_64_fixed(x)
 // result is 2.62 unsigned fixed in the range [0,1]
-uint64_t atan_rev_64_internal(uint64_t x) {
+uint64_t atan_rev_64_fixed(uint64_t x) {
 	int64_t x2=mults64hi(x,x)<<2;
 	int64_t u=                 -237264505088513LL;
 	u=mults64hi(u<<2,x2)      +2433048613302551LL;
@@ -771,7 +771,7 @@ pseudo_float pf_atan2_rev(pseudo_float y, pseudo_float x) {
 			}
 		}
 	}
-	int64_t d=atan_rev_64_internal(ratio)>>1;
+	int64_t d=atan_rev_64_fixed(ratio)>>1;
 	d=add_const+(negative?-d:d);
 	if(d==0) {
 		return 0;

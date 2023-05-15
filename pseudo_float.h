@@ -328,26 +328,26 @@ pseudo_float pf_atan2(pseudo_float y, pseudo_float x);
 
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
-uint64_t inv_sqrt64_internal(uint64_t x);
+uint64_t inv_sqrt64_fixed(uint64_t x);
 
 // x is a 0.64 unsigned fixed in the range [0,1)
 // result is 2.62 unsigned fixed in the range [1,2)
-uint64_t exp2_64_internal(uint64_t x);
+uint64_t exp2_64_fixed(uint64_t x);
 
 // x is a 1.63 unsigned fixed in the range [0,1)
 // calculate ln2(x+1)
 // result is 1.63 unsigned fixed in the range [0,1)
-uint64_t log2_64_internal(uint64_t x);
+uint64_t log2_64_fixed(uint64_t x);
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate sin_rev_64_internal(x)
+// calculate sin_rev(x)
 // result is 2.62 unsigned fixed in the range [0,1]
-uint64_t sin_rev_64_internal(uint64_t x);
+uint64_t sin_rev_64_fixed(uint64_t x);
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate atan_rev_64_internal(x)
+// calculate atan_rev(x)
 // result is 2.62 unsigned fixed in the range [0,1]
-uint64_t atan_rev_64_internal(uint64_t x);
+uint64_t atan_rev_64_fixed(uint64_t x);
 
 // useful to expose this
 inline uint64_t multu64hi(uint64_t x,uint64_t y) {return (((unsigned __int128)x)*y)>>64;}

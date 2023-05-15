@@ -47,6 +47,18 @@ When the generated executable is run, it will print out a line for any failed te
 	./pseudo_float_test 
 	Tests done, passed 3863863/3863863
 
+## Funtions supported
+
+See Functions.md for details of all the provided functions.
+
+* **Basic operators:** +, - (both unary and binary), *, /, ==, !=, >, >=, <, <=
+
+* **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, atan2, abs, fabs
+
+* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, psudo-float creation
+
+* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquo, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal,  all the comparison macros.
+
 ## Overflows
 
 There is an error value (PF_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
@@ -70,8 +82,6 @@ NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so 
 ## Design Considerations
 
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.
-
-This library does not implement the complete math library, although many of the functions would be easy to add. It misses (although would be easy to add): acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquo, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal and all the comparison macros.
 
 Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
 
@@ -134,8 +144,8 @@ The upside is that because this case only occurs with power of two or negative p
 ## Other notes
 
 The constants used for generating transcendental functions were generated using lolremez (https://github.com/samhocevar/lolremez) which is an implementation of the Remez algorithm (https://en.wikipedia.org/wiki/Remez_algorithm). the lolremez commands and results are included as comments in the code. Adjustments were then made:
-* integers are used rather than floating point
-* in some cases the calculation has various shifts applied to best use as much of the range of 64 bit integers as possible without overflowing
-* small adjustments are made in the last step to try and ensure the overall function is as smooth as possible, possibly at the expense of some accuracy.
+* scaled integers are used rather than floating point
+* in some cases the calculation has various scale changes applied to best use as much of the range of 64 bit integers as possible without overflowing
+* small adjustments are made in the last step to try and ensure the overall function is as smooth as possible at the boundaries, possibly at the expense of some accuracy.
 
 
