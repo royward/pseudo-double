@@ -55,11 +55,11 @@ This library does not implement the complete math library, although many of the 
 
 Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
 
-float:  32             speed  range
-double: 64  precision  speed  range
-fixed:  32             speed         consistency
-fixed:  64  precision  speed         consistency
-pseudo: 64  precision         range  consistency
+	float:  32             speed  range
+	double: 64  precision  speed  range
+	fixed:  32             speed         consistency
+	fixed:  64  precision  speed         consistency
+	pseudo: 64  precision         range  consistency
 
 Pseudo Floats are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as float, double or fixed. The pseudo-float library does not use 
 
@@ -97,13 +97,16 @@ Except for zero, the most significant bits of the mantissa after normalization a
 There is an asymmetry that needs to be considered. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
 
 A power of two is represented by:
-01000000.... * 2^exp
+
+	01000000.... * 2^exp
 
 Straight negating this would give:
-11000000.... * 2^exp
+
+	11000000.... * 2^exp
 
 This then need to be normalized to give:
-10000000.... * 2^(exp-1)
+
+	10000000.... * 2^(exp-1)
 
 This process is reversed for negating a negative power of two.
 
@@ -116,16 +119,16 @@ There is an error value (PF_NAN in C) overflows/errors/out_of_range are represen
 
 There are three macros that can be set to determine the behaviour in these cases:
 
-PF_DO_ERROR_OVERFLOW
-C default: return PF_NAN
+PF_DO_ERROR_OVERFLOW  
+C default: return PF_NAN  
 C++ default: throw std::overflow_error("overflow")
 
-PF_DO_ERROR_UNDERFLOW
-C default: return 0
+PF_DO_ERROR_UNDERFLOW  
+C default: return 0  
 C++ default: return PseudoFloat(0)
 
-PF_DO_ERROR_RANGE
-C default: return PF_NAN
+PF_DO_ERROR_RANGE  
+C default: return PF_NAN  
 C++ default: throw std::range_error("range")
 
 NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so in C it should be checked for explicitly after any calculation that might generate that value.
