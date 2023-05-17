@@ -1,6 +1,6 @@
 # pseudo-float
 
-A floating point library written using only integer operations for cross platform consistency.
+A C and C++ floating point library written using only integer operations for cross platform consistency.
 
 ## Overview
 
@@ -8,7 +8,9 @@ This is a partial floating point library that only uses integer CPU instructions
 
 https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-procedural-generation
 
-Note that this library does not follow the IEEE 754 standard.
+There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-float libray does not follow IEEE 754 at all, and instead has design choices more suited to a software implementation.
+
+This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang. 
 
 ## Usage
 
@@ -55,9 +57,9 @@ See Functions.md for details of all the provided functions.
 
 * **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, atan2, abs, fabs
 
-* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, psudo-float creation
+* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-float creation
 
-* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquo, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal,  all the comparison macros.
+* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquo, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
 
 ## Overflows
 
@@ -77,7 +79,7 @@ PF_DO_ERROR_RANGE
 C default: return PF_NAN  
 C++ default: throw std::range_error("range")
 
-NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so in C it should be checked for explicitly after any calculation that might generate that value.
+NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so if it is used, it should be checked for explicitly after any calculation that might generate that value.
 
 ## Design Considerations
 
@@ -97,7 +99,7 @@ Pseudo Floats are intended to give precision, range and consistency while sacrif
 
 Because this runs on a CPU using integer instructions rather than dedicated hardware, different choices are made for the storage format than IEE 754.
 
-An IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 bit unsigned mantissa with the most significant bit removed:
+For reference, an IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 bit unsigned mantissa with the most significant bit removed:
 
 	seeeeeeeeeeemmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 	6666555555555544444444443333333333222222222211111111110000000000
@@ -116,14 +118,14 @@ A number is represented as m*2^(e-16384) where m is a signed fixed point, -0.5<=
 There is an overflow value represented by all 1 bits. It is is returned in cases where an overflow, infinity or error happens.
 
 * 48 bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.
-* a signed mantissa rather than a separate sign bit means less branching and they are more predictable.
+* a signed mantissa rather than a separate sign bit means less branching and branches are more predictable.
 * putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be does by looking at the integer values.
-* the exponent in the least significant bits means that ldexp can be done with increment/decrement.
-* pseudo floats don't use denormalized representations - it's a lot of extra checking for only a small increase in dynamic range. Underflows go straight to zero
+* the exponent in the least significant bits means that ldexp can be done with increment/decrement (except in the case of overflow).
+* pseudo floats don't use denormalized representations - it's a lot of extra checking (cheap in hardware, expensive in software) for only a small increase in dynamic range. Unless set up to return some sort of error, underflows go straight to zero.
 
-Except for zero, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
+Except for zero and PF_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
 
-There is an asymmetry that needs to be considered. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
+There is an asymmetry that needs to be considered caused by -0.5<=m<5. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
 
 A power of two is represented by:
 

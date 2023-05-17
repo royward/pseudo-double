@@ -1,3 +1,32 @@
+// BSD 3-Clause License
+// 
+// Copyright (c) 2023, Roy Ward
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+// 
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #include "pseudo_float.h"
 #include <math.h>
 #include <stdio.h>
@@ -22,18 +51,22 @@ pseudo_float double_to_pf(double d) {
 			if(exponent<1) {
 				return 0;
 			}
+#if PF_ERROR_CHECK
 			if(exponent>(signed_pf_internal)(EXP_MASK+1)) {
 				PF_DO_ERROR_OVERFLOW;
 			}
+#endif
 			return (1ULL<<(PSEUDO_FLOAT_TOTAL_BITS-1))+exponent-1;
 		}
 	}
+#if PF_ERROR_CHECK
 	if(exponent<0) {
 		return 0;
 	}
 	if(exponent>(signed_pf_internal)EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
+#endif
 	mantissa=shift_left_signed(mantissa,PSEUDO_FLOAT_TOTAL_BITS-54);
 	//mantissa=(mantissa+PSEUDO_FLOAT_HALF_ULP)&~PSEUDO_FLOAT_HALF_ULP;
 	if(negative) {
@@ -110,12 +143,14 @@ int64_t pf_to_int64(pseudo_float x) {
 	}
 	signed_pf_internal vx=((signed_pf_internal)x)&EXP_MASK_INV;
 	int32_t exponent=(x&EXP_MASK)-PSEUDO_FLOAT_EXP_BIAS;
+#if PF_ERROR_CHECK
 	if(exponent>PSEUDO_FLOAT_TOTAL_BITS) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_FLOAT_TOTAL_BITS-exponent>=64) {
 		return 0;
 	}
+#endif
 	int64_t ret=vx>>(PSEUDO_FLOAT_TOTAL_BITS-exponent);
 	return ret;
 }
@@ -126,12 +161,14 @@ int64_t pf_to_int64fixed2(pseudo_float x, int32_t e) {
 	}
 	signed_pf_internal vx=((signed_pf_internal)x)&EXP_MASK_INV;
 	int32_t exponent=(x&EXP_MASK)-PSEUDO_FLOAT_EXP_BIAS-e;
+#if PF_ERROR_CHECK
 	if(exponent>PSEUDO_FLOAT_TOTAL_BITS) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_FLOAT_TOTAL_BITS-exponent>=64) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	int64_t ret=vx>>(PSEUDO_FLOAT_TOTAL_BITS-exponent);
 	return ret;
 }
@@ -148,12 +185,14 @@ uint64_t pf_to_uint64(pseudo_float x) {
 	if(exponent==PSEUDO_FLOAT_TOTAL_BITS+1) {
 		return vx<<1;
 	}
+#if PF_ERROR_CHECK
 	if(exponent>PSEUDO_FLOAT_TOTAL_BITS) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_FLOAT_TOTAL_BITS-exponent>=64) {
-		return 0;
+		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	uint64_t ret=vx>>(PSEUDO_FLOAT_TOTAL_BITS-exponent);
 	return ret;
 }
@@ -210,9 +249,11 @@ uint32_t inv_sqrt32_internal(uint32_t x) {
 ****************************************************************************************************/
 
 pseudo_float pf_inv_sqrt(pseudo_float x) {
+#if PF_ERROR_CHECK
 	if(((signed_pf_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
 	}
+#endif
 	int32_t exponent=x&EXP_MASK;
 	uint64_t mantissa=x&EXP_MASK_INV;
 	// [01.00 .. 11.11] = [2^0 .. 2^2)  ->  [2^0 .. 2^-1) = [1 .. 0.5)
@@ -228,9 +269,11 @@ pseudo_float pf_inv_sqrt(pseudo_float x) {
 }
 
 pseudo_float pf_sqrt(pseudo_float x) {
+#if PF_ERROR_CHECK
 	if(((signed_pf_internal)x)<0) {
 		PF_DO_ERROR_RANGE;
 	}
+#endif
 	if(x==0) {
 		return 0;
 	}
@@ -340,9 +383,11 @@ uint64_t log2_64_fixed(uint64_t x) {
 
 // x^y = e^ln(x)^y = e^(y*ln(x))
 pseudo_float pf_pow(pseudo_float x, pseudo_float y) {
+#if PF_ERROR_CHECK
 	if(((signed_pf_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
 	}
+#endif
 	int64_t exponent=(x&EXP_MASK);
 	int64_t e=exponent-PSEUDO_FLOAT_EXP_BIAS-2;
 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
@@ -401,17 +446,21 @@ pseudo_float pf_pow(pseudo_float x, pseudo_float y) {
 		new_exponent=((signed_pf_internal)(vr&~m))>>(PSEUDO_FLOAT_TOTAL_BITS-er);
 		fraction=((signed_pf_internal)(vr&m))<<er;
 	} else {
+#if PF_ERROR_CHECK
 		if(vr<0) {
 			PF_DO_ERROR_UNDERFLOW;
 		} else {
 			PF_DO_ERROR_OVERFLOW;
 		}
+#endif
 	}
 	int32_t newe=new_exponent+PSEUDO_FLOAT_EXP_BIAS+2;
-	if(newe<0) {
+	if(newe<0) { // common to have underflow, so leave this in
 		PF_DO_ERROR_UNDERFLOW;
+#if PF_ERROR_CHECK
 	} else if(newe>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
+#endif
 	}
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pf_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
@@ -419,9 +468,11 @@ pseudo_float pf_pow(pseudo_float x, pseudo_float y) {
 }
 
 pseudo_float pf_log2(pseudo_float x) {
+#if PF_ERROR_CHECK
 	if(((signed_pf_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
 	}
+#endif
 	int64_t exponent=(x&EXP_MASK);
 	int64_t e=exponent-PSEUDO_FLOAT_EXP_BIAS-2;
 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
@@ -475,18 +526,23 @@ pseudo_float pf_exp2(pseudo_float x) {
 		new_exponent=((signed_pf_internal)(x&~m))>>(PSEUDO_FLOAT_TOTAL_BITS-e);
 		fraction=((signed_pf_internal)(x&EXP_MASK_INV&m))<<e;
 	} else {
+		// common to have underflow, so leave this in
 		if(((signed_pf_internal)x)<0) {
 			PF_DO_ERROR_UNDERFLOW;
+#if PF_ERROR_CHECK
 		} else {
 			PF_DO_ERROR_OVERFLOW;
+#endif
 		}
 	}
 	int32_t newe=new_exponent+PSEUDO_FLOAT_EXP_BIAS+2;
+#if PF_ERROR_CHECK
 	if(newe<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	} else if(newe>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
+#endif
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pf_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_FLOAT_TOTAL_BITS))<<(64-PSEUDO_FLOAT_TOTAL_BITS))&EXP_MASK_INV);
 }
@@ -817,12 +873,14 @@ pseudo_float pf_ceil(pseudo_float x) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)(vr+new_exponent);
 }
 
@@ -845,12 +903,14 @@ pseudo_float pf_round(pseudo_float x) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)(vr+new_exponent);
 }
 

@@ -1,3 +1,32 @@
+// BSD 3-Clause License
+// 
+// Copyright (c) 2023, Roy Ward
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+// 
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+// 
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef PSEUDO_FLOAT_H
 #define PSEUDO_FLOAT_H
 #include <stdint.h>
@@ -48,6 +77,11 @@ typedef int64_t signed_large_pf_internal;
 #define PSEUDO_FLOAT_HALF_ULP ((1ULL<<(PSEUDO_FLOAT_EXP_BITS-1))-1)
 #define PF_NAN ((pseudo_float)(-1))
 
+#ifndef PF_ERROR_CHECK
+// Setting this to 0 will turn off most overflow/underflow/range checking and result in a tiny speed increase
+// Probably not worth it in most scenarios
+#define PF_ERROR_CHECK 1
+#endif
 #ifndef PF_DO_ERROR_OVERFLOW
 #define PF_DO_ERROR_OVERFLOW return PF_NAN
 #endif
@@ -83,15 +117,19 @@ inline pseudo_float pf_neg(pseudo_float x) {
 		// get the high order byte
 		uint32_t hi_byte=x>>(PSEUDO_FLOAT_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
+#if PF_ERROR_CHECK
 			if(exponent==EXP_MASK) {
 				PF_DO_ERROR_OVERFLOW;
 			}
+#endif
 			return (mantissa>>1)+exponent+1;
 		}
 		if(hi_byte==0x40) {
+#if PF_ERROR_CHECK
 			if(exponent==0) {
 				PF_DO_ERROR_UNDERFLOW;
 			}
+#endif
 			return (mantissa<<1)+exponent-1;
 		}
 	}
@@ -108,9 +146,11 @@ inline pseudo_float pf_abs(pseudo_float x) {
 		// get the high order byte
 		uint32_t hi_byte=x>>(PSEUDO_FLOAT_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
+#if PF_ERROR_CHECK
 			if(exponent==EXP_MASK) {
 				PF_DO_ERROR_OVERFLOW;
 			}
+#endif
 			return (mantissa>>1)+exponent+1;
 		}
 	}
@@ -148,15 +188,24 @@ inline int pf_gte(pseudo_float x, pseudo_float y) {
 inline pseudo_float pf_sub(pseudo_float x, pseudo_float y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
-	if(expy-expx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	int32_t ydiffx=expy-expx;
+	if(ydiffx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
 		return pf_neg(y);
 	}
-	if(expy-expx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	if(ydiffx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
 		return x;
 	}
-	int32_t exp_max=((expy>expx)?expy:expx)+1;
-	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>(exp_max-expx);
-	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>(exp_max-expy);
+	int32_t exp_max;
+	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>1;
+	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>1;
+	if(ydiffx>=0) {
+		exp_max=expy;
+		vx>>=ydiffx;
+	} else {
+		exp_max=expx;
+		vy>>=-ydiffx;
+	}
+	exp_max+=1;
 	signed_pf_internal vr=(vx-vy+PSEUDO_FLOAT_HALF_ULP)&~PSEUDO_FLOAT_HALF_ULP;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
@@ -168,27 +217,38 @@ inline pseudo_float pf_sub(pseudo_float x, pseudo_float y) {
 	}
 	vr<<=leading_bits;
 	int32_t new_exponent=exp_max-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		return 0;
+		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
 }
 
 inline pseudo_float pf_add(pseudo_float x, pseudo_float y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
-	if(expy-expx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	int32_t ydiffx=expy-expx;
+	if(ydiffx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
 		return y;
 	}
-	if(expy-expx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	if(ydiffx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
 		return x;
 	}
-	int32_t exp_max=((expy>expx)?expy:expx)+1;
-	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>(exp_max-expx);
-	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>(exp_max-expy);
+	int32_t exp_max;
+	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>1;
+	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>1;
+	if(ydiffx>=0) {
+		exp_max=expy;
+		vx>>=ydiffx;
+	} else {
+		exp_max=expx;
+		vy>>=-ydiffx;
+	}
+	exp_max+=1;
 	signed_pf_internal vr=(vx+vy+PSEUDO_FLOAT_HALF_ULP)&~PSEUDO_FLOAT_HALF_ULP;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
@@ -200,12 +260,14 @@ inline pseudo_float pf_add(pseudo_float x, pseudo_float y) {
 	}
 	vr<<=leading_bits;
 	int32_t new_exponent=exp_max-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		return 0;
+		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
 }
 
@@ -222,12 +284,14 @@ inline pseudo_float pf_mult(pseudo_float x, pseudo_float y) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=expx+expy-PSEUDO_FLOAT_EXP_BIAS-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
 }
 
@@ -236,7 +300,7 @@ inline pseudo_float pf_div(pseudo_float x, pseudo_float y) {
 	int32_t expy=y&EXP_MASK;
 	signed_pf_internal vx=(signed_pf_internal)(x&EXP_MASK_INV);
 	signed_pf_internal vy=(signed_pf_internal)(y&EXP_MASK_INV);
-	if(vy==0) {
+	if(vy==0) { // leave this one in to avoid division bby zero signal
 		PF_DO_ERROR_RANGE;
 	}
 	signed_pf_internal vr=(((((signed_large_pf_internal)vx)>>2)<<64)/vy);
@@ -247,16 +311,19 @@ inline pseudo_float pf_div(pseudo_float x, pseudo_float y) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=2+expx-expy+PSEUDO_FLOAT_EXP_BIAS-leading_bits;
+#if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
 }
 
 inline pseudo_float pf_ldexp(pseudo_float x, int y) {
+#if PF_ERROR_CHECK
 	int32_t expx=x&EXP_MASK;
 	if(expx+y>(int32_t)EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
@@ -264,6 +331,7 @@ inline pseudo_float pf_ldexp(pseudo_float x, int y) {
 	if(expx+y<0) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
+#endif
 	return x+y;
 }
 
