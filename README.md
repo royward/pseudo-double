@@ -1,46 +1,50 @@
 # pseudo-float
 
-A C and C++ floating point library written using only integer operations for cross platform consistency.
+A relatively fast C and C++ 64 bit floating point library written using only integer operations for cross platform consistency.
 
-## Overview
+# Overview
 
 This is a partial floating point library that only uses integer CPU instructions (no floating point) and is designed to provide consistent cross platform results in cases where fixed point does not have enough dynamic range. Exact consistency across platforms is particularly important for procedural generation or other very ill conditioned systems where a tiny change in the input or calculation can produce an enormous change in the outputs. It was inspired by this post:
 
 https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-procedural-generation
 
-There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-float libray does not follow IEEE 754 at all, and instead has design choices more suited to a software implementation.
+There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-float library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point.
 
 This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang. 
 
-## Usage
+# Usage
 
 See Functions.md for details of all the provided functions.
 
 For most uses, the easiest option is to include the source files directly in your project.
 
-### C
+## C
 
 pseudo_float is aliased to uint64_t
 
-#### Files
+### Files
 
 **pseudo_float.h**: file to include to access the C functionality. Some of the basic functions are provided by inline functions.
 
 **pseudo_float.c**: Add this into your project. This includes the functionality not provided by pseudo_float.h
 
-### C++
+## C++
 
 PseudoFloat is provided as a class with operator overloading and function overloading are used to provide the same syntax as the standard floating point operations.
 
-#### Files
+### Files
 
 **PseudoFloat.h**: file to include to access the C++ functionality
 
 **pseudo_float.cpp**: is just a C++ wrapper for pseudo_float.c
 
-**PseudoFloat_test.cpp**: a test file for the rest of the library. To build this do:
+**PseudoFloat_test.cpp**: a test for the rest of the library.
 
-#### Running the test
+**PseudoFloat_speed_test.cpp**: a simple speed test. 10x10 matrix inversion plus some short loop tests.
+
+### Running the tests
+
+To built the library test:
 
 	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_float_test pseudo_float.cpp PseudoFloat_test.cpp
 
@@ -49,7 +53,11 @@ When the generated executable is run, it will print out a line for any failed te
 	./pseudo_float_test 
 	Tests done, passed 3863863/3863863
 
-## Funtions supported
+Similarly, the speed tests can be built using:
+
+	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_float_speed_test pseudo_float.cpp PseudoFloat_speed_test.cpp
+
+# Funtions supported
 
 See Functions.md for details of all the provided functions.
 
@@ -59,9 +67,9 @@ See Functions.md for details of all the provided functions.
 
 * **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-float creation
 
-* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquo, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
+* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
 
-## Overflows
+# Overflows
 
 There is an error value (PF_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
 
@@ -81,7 +89,9 @@ C++ default: throw std::range_error("range")
 
 NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so if it is used, it should be checked for explicitly after any calculation that might generate that value.
 
-## Design Considerations
+Overflow, range and some underflow checking can be turned off by setting the macro PF_ERROR_CHECK to 0 (default is 1). This may give a very slight preformance increase, but at the cost of returning undetectable garbage instread of and error. It is not worth turning errors off unless you are certain that overflow/range/underflow errors will not occur. This will also cause some "may be used uninitialized in this function" errors on compilation.
+
+# Design Considerations
 
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.
 
@@ -95,7 +105,7 @@ Four properties to consider when determining how to perform calculations on cont
 
 Pseudo Floats are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as float, double or fixed. The pseudo-float library does not use 
 
-## Underlying structure
+# Underlying structure
 
 Because this runs on a CPU using integer instructions rather than dedicated hardware, different choices are made for the storage format than IEE 754.
 
@@ -143,7 +153,7 @@ This process is reversed for negating a negative power of two.
 
 The upside is that because this case only occurs with power of two or negative power of two, this case is likely to be rarer than the other cases, which will improve branch prediction.
 
-## Other notes
+# Other notes
 
 The constants used for generating transcendental functions were generated using lolremez (https://github.com/samhocevar/lolremez) which is an implementation of the Remez algorithm (https://en.wikipedia.org/wiki/Remez_algorithm). the lolremez commands and results are included as comments in the code. Adjustments were then made:
 * scaled integers are used rather than floating point
