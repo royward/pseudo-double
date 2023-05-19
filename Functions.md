@@ -2,12 +2,12 @@
 
 The form of these is:
 
-### <function name>
+### \<function name\>
 
-	mlib: \<standard math library signature\>
-	C: \<C signature\>
-	C++: \<C++ signature\>
-	\<optional description\>
+	mlib: <standard math library signature>
+	C: <C signature>
+	C++: <C++ signature>
+	<optional description>
 
 ## Basic Arithmetic
 
