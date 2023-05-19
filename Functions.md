@@ -2,7 +2,7 @@
 
 The form of these is:
 
-### \<function name\>
+### <function name>
 
 	mlib: \<standard math library signature\>
 	C: \<C signature\>
@@ -25,21 +25,21 @@ The form of these is:
 
 ### Greater than or equal to
 
-	mlib: x\>=y
+	mlib: x>=y
 	C: inline int pf_gte(pseudo_float x, pseudo_float y);
-	inline bool PseudoFloat::operator\>=(const PseudoFloat x) const;
+	inline bool PseudoFloat::operator>=(const PseudoFloat x) const;
 
 ### Less than
 
-	mlib: x\<y
+	mlib: x<y
 	C: (use pf_gt with reversed arguments)
-	inline bool PseudoFloat::operator\<(const PseudoFloat x) const;
+	inline bool PseudoFloat::operator<(const PseudoFloat x) const;
 
 ### Less than or equal to
 
-	mlib: x\<=y
+	mlib: x<=y
 	C: (use pf_gte with reversed arguments)
-	inline bool PseudoFloat::operator\<=(const PseudoFloat x) const;
+	inline bool PseudoFloat::operator<=(const PseudoFloat x) const;
 
 ## Quick comparison with 0. For C, just do a straight integer comparison with zero
 
@@ -181,7 +181,7 @@ The base fuctions are pf_exp2 and pf_log2, so:
 
 Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is 2pi radians.
 
-The following identities are exactly true for all integer n and pseudofloat x\>0,y\>0:
+The following identities are exactly true for all integer n and pseudofloat x>0,y>0:
 
 * pf_sin_rev(n/2)=0
 * pf_sin_rev(n+1/4)=1
@@ -238,7 +238,7 @@ The following identities are exactly true for all integer n and pseudofloat x\>0
 ## Fixed integer helper functions
 
 	C/C++: inline uint64_t multu64hi(uint64_t x,uint64_t y);
-	calculate (x*y)\>\>64
+	calculate (x*y)>>64
 	Useful if x,y and result are considered 0.64 fixed ints
 
 	C/C++: uint64_t inv_sqrt64_fixed(uint64_t x);
