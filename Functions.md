@@ -4,12 +4,42 @@ The form of these is:
 
 ### \<function name\>
 
-	mlib: <standard math library signature>
+	mlib: <standard math library or built in signature>
 	C: <C signature>
 	C++: <C++ signature>
 	<optional description>
 
 ## Basic Arithmetic
+
+### Add
+
+	mlib: x+y
+	C: inline int pd_add(pseudo_double x, pseudo_double y);
+	inline PseudoDouble PseudoDouble::operator+(const PseudoDouble x) const;
+
+### Subtract
+
+	mlib: x-y
+	C: inline int pd_sub(pseudo_double x, pseudo_double y);
+	inline PseudoDouble PseudoDouble::operator-(const PseudoDouble x) const;
+
+### Multiply
+
+	mlib: x*y
+	C: inline int pd_mult(pseudo_double x, pseudo_double y);
+	inline PseudoDouble PseudoDouble::operator*(const PseudoDouble x) const;
+
+### Divide
+
+	mlib: x/y
+	C: inline int pd_div(pseudo_double x, pseudo_double y);
+	inline PseudoDouble PseudoDouble::operator/(const PseudoDouble x) const;
+
+### Negate
+
+	mlib: -x
+	C: inline int pd_neg(pseudo_double x);
+	inline PseudoDouble PseudoDouble::operator-() const;
 
 ### Equal
 

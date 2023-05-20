@@ -59,6 +59,8 @@ Find the roots of 0.3\*x^2-4\*x+6
 
 #### C++
 
+Here we get to make good use of operator and function overloading.
+
 	PseudoDouble a=PD_create_fixed10(3,-1); // 0.3
 	PseudoDouble b=-4;
 	PseudoDouble c=6;
