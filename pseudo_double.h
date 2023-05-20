@@ -27,15 +27,15 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef PSEUDO_FLOAT_H
-#define PSEUDO_FLOAT_H
+#ifndef PSEUDO_DOUBLE_H
+#define PSEUDO_DOUBLE_H
 #include <stdint.h>
 
 // Can set any of these or just use the defaults
-//#define PSEUDO_FLOAT_TOTAL_BITS 64
-//#define PSEUDO_FLOAT_EXP_BITS 16
-// This will default to 2^(PSEUDO_FLOAT_EXP_BITS-1)
-//#define PSEUDO_FLOAT_EXP_BIAS 32768
+//#define PSEUDO_DOUBLE_TOTAL_BITS 64
+//#define PSEUDO_DOUBLE_EXP_BITS 16
+// This will default to 2^(PSEUDO_DOUBLE_EXP_BITS-1)
+//#define PSEUDO_DOUBLE_EXP_BIAS 32768
 // This will default to return PF_NAN
 //#define PF_DO_ERROR_OVERFLOW return PF_NAN
 //#define PF_DO_ERROR_UNDERFLOW return 0
@@ -45,37 +45,37 @@
 // [.1000 .. .1011] = [-0.5 .. -0.25)
 // [.0100 .. .0111] = [0.25 .. 0.5)
 
-#ifndef PSEUDO_FLOAT_TOTAL_BITS
-#define PSEUDO_FLOAT_TOTAL_BITS 64
+#ifndef PSEUDO_DOUBLE_TOTAL_BITS
+#define PSEUDO_DOUBLE_TOTAL_BITS 64
 #endif
 
-#ifndef PSEUDO_FLOAT_EXP_BITS
+#ifndef PSEUDO_DOUBLE_EXP_BITS
 // Recommend 8,16 or 32 for this. Other values will work but be less efficient
-#define PSEUDO_FLOAT_EXP_BITS 16
+#define PSEUDO_DOUBLE_EXP_BITS 16
 #endif
 
-#define EXP_MASK ((1LL<<PSEUDO_FLOAT_EXP_BITS)-1)
-#define EXP_MASK_INV (~((1ULL<<PSEUDO_FLOAT_EXP_BITS)-1))
-#if PSEUDO_FLOAT_TOTAL_BITS==64
-typedef uint64_t pseudo_float;
-typedef uint64_t unsigned_pf_internal;
-typedef int64_t signed_pf_internal;
-typedef __int128 signed_large_pf_internal;
+#define EXP_MASK ((1LL<<PSEUDO_DOUBLE_EXP_BITS)-1)
+#define EXP_MASK_INV (~((1ULL<<PSEUDO_DOUBLE_EXP_BITS)-1))
+#if PSEUDO_DOUBLE_TOTAL_BITS==64
+typedef uint64_t pseudo_double;
+typedef uint64_t unsigned_pd_internal;
+typedef int64_t signed_pd_internal;
+typedef __int128 signed_large_pd_internal;
 #define clz __builtin_clzll
-#elif PSEUDO_FLOAT_TOTAL_BITS==32
-typedef uint32_t pseudo_float;
-typedef uint32_t unsigned_pf_internal;
-typedef int32_t signed_pf_internal;
-typedef int64_t signed_large_pf_internal;
+#elif PSEUDO_DOUBLE_TOTAL_BITS==32
+typedef uint32_t pseudo_double;
+typedef uint32_t unsigned_pd_internal;
+typedef int32_t signed_pd_internal;
+typedef int64_t signed_large_pd_internal;
 #define clz __builtin_clz
 #else
-#error PSEUDO_FLOAT_TOTAL_BITS must be 32 or 64 bits
+#error PSEUDO_DOUBLE_TOTAL_BITS must be 32 or 64 bits
 #endif
-#ifndef PSEUDO_FLOAT_EXP_BIAS
-#define PSEUDO_FLOAT_EXP_BIAS (1U<<(PSEUDO_FLOAT_EXP_BITS-1))
+#ifndef PSEUDO_DOUBLE_EXP_BIAS
+#define PSEUDO_DOUBLE_EXP_BIAS (1U<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #endif
-#define PSEUDO_FLOAT_HALF_ULP ((1ULL<<(PSEUDO_FLOAT_EXP_BITS-1))-1)
-#define PF_NAN ((pseudo_float)(-1))
+#define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
+#define PF_NAN ((pseudo_double)(-1))
 
 #ifndef PF_ERROR_CHECK
 // Setting this to 0 will turn off most overflow/underflow/range checking and result in a tiny speed increase
@@ -92,30 +92,30 @@ typedef int64_t signed_large_pf_internal;
 #define PF_DO_ERROR_RANGE return PF_NAN
 #endif
 
-inline signed_pf_internal shift_left_signed(signed_pf_internal x, int shift) {
+inline signed_pd_internal shift_left_signed(signed_pd_internal x, int shift) {
 	if(shift>=0) {
 		return x<<shift;
 	}
 	return x>>-shift;
 }
 
-inline unsigned_pf_internal shift_left_unsigned(unsigned_pf_internal x, int shift) {
+inline unsigned_pd_internal shift_left_unsigned(unsigned_pd_internal x, int shift) {
 	if(shift>=0) {
 		return x<<shift;
 	}
 	return x>>-shift;
 }
 
-inline pseudo_float pf_neg(pseudo_float x) {
+inline pseudo_double pd_neg(pseudo_double x) {
 	// check for special cases due to the representation range of two's complement being asymmetric:
 	// mantissa of 1000000000... can't be negated directly and will need an increase in the exponent
 	// mantissa of 0100000000... has exponent decreased after negation
 	// everything else negates as expected
 	uint32_t exponent=x&EXP_MASK;
-	unsigned_pf_internal mantissa=x&EXP_MASK_INV;
+	unsigned_pd_internal mantissa=x&EXP_MASK_INV;
 	if((mantissa<<2)==0) {
 		// get the high order byte
-		uint32_t hi_byte=x>>(PSEUDO_FLOAT_TOTAL_BITS-8);
+		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
 #if PF_ERROR_CHECK
 			if(exponent==EXP_MASK) {
@@ -136,15 +136,15 @@ inline pseudo_float pf_neg(pseudo_float x) {
 	return (-(x&EXP_MASK_INV))+exponent;
 }
 
-inline pseudo_float pf_abs(pseudo_float x) {
-	if(((signed_pf_internal)x)>=0) {
+inline pseudo_double pd_abs(pseudo_double x) {
+	if(((signed_pd_internal)x)>=0) {
 		return x;
 	}
 	uint32_t exponent=x&EXP_MASK;
-	unsigned_pf_internal mantissa=x&EXP_MASK_INV;
+	unsigned_pd_internal mantissa=x&EXP_MASK_INV;
 	if((mantissa<<2)==0) {
 		// get the high order byte
-		uint32_t hi_byte=x>>(PSEUDO_FLOAT_TOTAL_BITS-8);
+		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
 #if PF_ERROR_CHECK
 			if(exponent==EXP_MASK) {
@@ -157,13 +157,13 @@ inline pseudo_float pf_abs(pseudo_float x) {
 	return (-(x&EXP_MASK_INV))+exponent;
 }
 
-inline int pf_gt(pseudo_float x, pseudo_float y) {
-	int neg=((unsigned_pf_internal)y)>>(PSEUDO_FLOAT_TOTAL_BITS-1);
-	if((x^y)>>(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+inline int pd_gt(pseudo_double x, pseudo_double y) {
+	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg;
 	}
 	// signs are the same, check exponent
-	int expdiff=(signed_pf_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
 	if(expdiff!=0) {
 		return (expdiff>0)^neg;
 	}
@@ -171,13 +171,13 @@ inline int pf_gt(pseudo_float x, pseudo_float y) {
 	return (x>y);
 }
 
-inline int pf_gte(pseudo_float x, pseudo_float y) {
-	int neg=((unsigned_pf_internal)y)>>(PSEUDO_FLOAT_TOTAL_BITS-1);
-	if((x^y)>>(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+inline int pd_gte(pseudo_double x, pseudo_double y) {
+	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg;
 	}
 	// signs are the same, check exponent
-	int expdiff=(signed_pf_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
 	if(expdiff!=0) {
 		return (expdiff>0)^neg;
 	}
@@ -185,19 +185,19 @@ inline int pf_gte(pseudo_float x, pseudo_float y) {
 	return (x>=y);
 }
 
-inline pseudo_float pf_sub(pseudo_float x, pseudo_float y) {
+inline pseudo_double pd_sub(pseudo_double x, pseudo_double y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	int32_t ydiffx=expy-expx;
-	if(ydiffx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
-		return pf_neg(y);
+	if(ydiffx>=(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+		return pd_neg(y);
 	}
-	if(ydiffx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	if(ydiffx<=-(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return x;
 	}
 	int32_t exp_max;
-	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>1;
-	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>1;
+	signed_pd_internal vx=((signed_pd_internal)(x&EXP_MASK_INV))>>1;
+	signed_pd_internal vy=((signed_pd_internal)(y&EXP_MASK_INV))>>1;
 	if(ydiffx>=0) {
 		exp_max=expy;
 		vx>>=ydiffx;
@@ -206,10 +206,10 @@ inline pseudo_float pf_sub(pseudo_float x, pseudo_float y) {
 		vy>>=-ydiffx;
 	}
 	exp_max+=1;
-	signed_pf_internal vr=(vx-vy+PSEUDO_FLOAT_HALF_ULP)&~PSEUDO_FLOAT_HALF_ULP;
+	signed_pd_internal vr=(vx-vy+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
-		return (pseudo_float)0;
+		return (pseudo_double)0;
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	if(leading_bits>exp_max) {
@@ -225,22 +225,22 @@ inline pseudo_float pf_sub(pseudo_float x, pseudo_float y) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
+	return (pseudo_double)((vr&EXP_MASK_INV)+new_exponent);
 }
 
-inline pseudo_float pf_add(pseudo_float x, pseudo_float y) {
+inline pseudo_double pd_add(pseudo_double x, pseudo_double y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	int32_t ydiffx=expy-expx;
-	if(ydiffx>=(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	if(ydiffx>=(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return y;
 	}
-	if(ydiffx<=-(PSEUDO_FLOAT_TOTAL_BITS-1)) {
+	if(ydiffx<=-(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return x;
 	}
 	int32_t exp_max;
-	signed_pf_internal vx=((signed_pf_internal)(x&EXP_MASK_INV))>>1;
-	signed_pf_internal vy=((signed_pf_internal)(y&EXP_MASK_INV))>>1;
+	signed_pd_internal vx=((signed_pd_internal)(x&EXP_MASK_INV))>>1;
+	signed_pd_internal vy=((signed_pd_internal)(y&EXP_MASK_INV))>>1;
 	if(ydiffx>=0) {
 		exp_max=expy;
 		vx>>=ydiffx;
@@ -249,10 +249,10 @@ inline pseudo_float pf_add(pseudo_float x, pseudo_float y) {
 		vy>>=-ydiffx;
 	}
 	exp_max+=1;
-	signed_pf_internal vr=(vx+vy+PSEUDO_FLOAT_HALF_ULP)&~PSEUDO_FLOAT_HALF_ULP;
+	signed_pd_internal vr=(vx+vy+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
-		return (pseudo_float)0;
+		return (pseudo_double)0;
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	if(leading_bits>exp_max) {
@@ -268,22 +268,22 @@ inline pseudo_float pf_add(pseudo_float x, pseudo_float y) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
+	return (pseudo_double)((vr&EXP_MASK_INV)+new_exponent);
 }
 
-inline pseudo_float pf_mult(pseudo_float x, pseudo_float y) {
+inline pseudo_double pd_mult(pseudo_double x, pseudo_double y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
-	signed_pf_internal vx=(signed_pf_internal)(x&EXP_MASK_INV);
-	signed_pf_internal vy=(signed_pf_internal)(y&EXP_MASK_INV);
-	signed_pf_internal vr=(((signed_large_pf_internal)vx)*vy)>>64;
+	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
+	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
+	signed_pd_internal vr=(((signed_large_pd_internal)vx)*vy)>>64;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
-		return (pseudo_float)0;
+		return (pseudo_double)0;
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
-	int32_t new_exponent=expx+expy-PSEUDO_FLOAT_EXP_BIAS-leading_bits;
+	int32_t new_exponent=expx+expy-PSEUDO_DOUBLE_EXP_BIAS-leading_bits;
 #if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
@@ -292,25 +292,25 @@ inline pseudo_float pf_mult(pseudo_float x, pseudo_float y) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
+	return (pseudo_double)((vr&EXP_MASK_INV)+new_exponent);
 }
 
-inline pseudo_float pf_div(pseudo_float x, pseudo_float y) {
+inline pseudo_double pd_div(pseudo_double x, pseudo_double y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
-	signed_pf_internal vx=(signed_pf_internal)(x&EXP_MASK_INV);
-	signed_pf_internal vy=(signed_pf_internal)(y&EXP_MASK_INV);
+	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
+	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
 	if(vy==0) { // leave this one in to avoid division bby zero signal
 		PF_DO_ERROR_RANGE;
 	}
-	signed_pf_internal vr=(((((signed_large_pf_internal)vx)>>2)<<64)/vy);
+	signed_pd_internal vr=(((((signed_large_pd_internal)vx)>>2)<<64)/vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
-		return (pseudo_float)0;
+		return (pseudo_double)0;
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
-	int32_t new_exponent=2+expx-expy+PSEUDO_FLOAT_EXP_BIAS-leading_bits;
+	int32_t new_exponent=2+expx-expy+PSEUDO_DOUBLE_EXP_BIAS-leading_bits;
 #if PF_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
 		PF_DO_ERROR_OVERFLOW;
@@ -319,10 +319,10 @@ inline pseudo_float pf_div(pseudo_float x, pseudo_float y) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_float)((vr&EXP_MASK_INV)+new_exponent);
+	return (pseudo_double)((vr&EXP_MASK_INV)+new_exponent);
 }
 
-inline pseudo_float pf_ldexp(pseudo_float x, int y) {
+inline pseudo_double pd_ldexp(pseudo_double x, int y) {
 #if PF_ERROR_CHECK
 	int32_t expx=x&EXP_MASK;
 	if(expx+y>(int32_t)EXP_MASK) {
@@ -335,14 +335,14 @@ inline pseudo_float pf_ldexp(pseudo_float x, int y) {
 	return x+y;
 }
 
-pseudo_float double_to_pf(double d);
-pseudo_float int64_to_pf(int64_t d);
-pseudo_float uint64_to_pf(uint64_t d);
-double pf_to_double(pseudo_float d);
-int64_t pf_to_int64(pseudo_float d);
-uint64_t pf_to_uint64(pseudo_float d);
+pseudo_double double_to_pd(double d);
+pseudo_double int64_to_pd(int64_t d);
+pseudo_double uint64_to_pd(uint64_t d);
+double pd_to_double(pseudo_double d);
+int64_t pd_to_int64(pseudo_double d);
+uint64_t pd_to_uint64(pseudo_double d);
 
-inline pseudo_float int64fixed10_to_pf(int64_t d, int32_t e) {
+inline pseudo_double int64fixed10_to_pd(int64_t d, int32_t e) {
 	if(d==0) {
 		return 0;
 	}
@@ -369,30 +369,30 @@ inline pseudo_float int64fixed10_to_pf(int64_t d, int32_t e) {
 		e++;
 	}
 	int lead_bits=clz(d);
-	int exp=nexp+PSEUDO_FLOAT_EXP_BIAS+65-lead_bits;
-	return ((shift_left_signed(d,PSEUDO_FLOAT_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp;
+	int exp=nexp+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
+	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp;
 }
 
-pseudo_float int64fixed2_to_pf(int64_t d, int32_t e);
-int64_t pf_to_int64fixed2(pseudo_float d, int32_t e);
+pseudo_double int64fixed2_to_pd(int64_t d, int32_t e);
+int64_t pd_to_int64fixed2(pseudo_double d, int32_t e);
 
-pseudo_float pf_floor(pseudo_float x);
-pseudo_float pf_ceil(pseudo_float x);
-pseudo_float pf_round(pseudo_float x);
-pseudo_float pf_sqrt(pseudo_float x);
-pseudo_float pf_inv_sqrt(pseudo_float x);
-pseudo_float pf_exp2(pseudo_float x);
-pseudo_float pf_exp(pseudo_float x);
-pseudo_float pf_log2(pseudo_float x);
-pseudo_float pf_log(pseudo_float x);
-pseudo_float pf_log10(pseudo_float x);
-pseudo_float pf_pow(pseudo_float x, pseudo_float y);
-pseudo_float pf_sin_rev(pseudo_float x);
-pseudo_float pf_cos_rev(pseudo_float x);
-pseudo_float pf_atan2_rev(pseudo_float y, pseudo_float x);
-pseudo_float pf_sin(pseudo_float x);
-pseudo_float pf_cos(pseudo_float x);
-pseudo_float pf_atan2(pseudo_float y, pseudo_float x);
+pseudo_double pd_floor(pseudo_double x);
+pseudo_double pd_ceil(pseudo_double x);
+pseudo_double pd_round(pseudo_double x);
+pseudo_double pd_sqrt(pseudo_double x);
+pseudo_double pd_inv_sqrt(pseudo_double x);
+pseudo_double pd_exp2(pseudo_double x);
+pseudo_double pd_exp(pseudo_double x);
+pseudo_double pd_log2(pseudo_double x);
+pseudo_double pd_log(pseudo_double x);
+pseudo_double pd_log10(pseudo_double x);
+pseudo_double pd_pow(pseudo_double x, pseudo_double y);
+pseudo_double pd_sin_rev(pseudo_double x);
+pseudo_double pd_cos_rev(pseudo_double x);
+pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x);
+pseudo_double pd_sin(pseudo_double x);
+pseudo_double pd_cos(pseudo_double x);
+pseudo_double pd_atan2(pseudo_double y, pseudo_double x);
 
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
@@ -420,6 +420,6 @@ uint64_t atan_rev_64_fixed(uint64_t x);
 // useful to expose this
 inline uint64_t multu64hi(uint64_t x,uint64_t y) {return (((unsigned __int128)x)*y)>>64;}
 
-void debug_pf_output(pseudo_float d);
+void debug_pd_output(pseudo_double d);
 
-#endif // PSEUDO_FLOAT_H
+#endif // PSEUDO_DOUBLE_H

@@ -1,20 +1,20 @@
-#include "PseudoFloat.h"
+#include "PseudoDouble.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include "PseudoFloat_iostream.h"
+#include "PseudoDouble_iostream.h"
 
 using std::cout;
 using std::endl;
 
 static const int MAX_MATRIX_SIZE=10;
 
-double detrminant(double[][MAX_MATRIX_SIZE], int);
+double determinant(double[][MAX_MATRIX_SIZE], int);
 void cofactors(double[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
 void trans(double[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
-PseudoFloat detrminant(PseudoFloat[][MAX_MATRIX_SIZE], int);
-void cofactors(PseudoFloat[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
-void trans(PseudoFloat[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
+PseudoDouble determinant(PseudoDouble[][MAX_MATRIX_SIZE], int);
+void cofactors(PseudoDouble[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
+void trans(PseudoDouble[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int);
 
 uint64_t get_thread_time() {
 	timespec tvalue;
@@ -24,7 +24,7 @@ uint64_t get_thread_time() {
 	return start;
 }
 
-double detrminant(double a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
+double determinant(double a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
 	double s = 1, det = 0, b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE];
 	int i, j, m, n, c;
 	if (k == 1) {
@@ -47,7 +47,7 @@ double detrminant(double a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
 					}
 				}
 			}
-			det = det + s * (a[0][c] * detrminant(b, k - 1));
+			det = det + s * (a[0][c] * determinant(b, k - 1));
 			s = -1 * s;
 		}
 	}
@@ -74,7 +74,7 @@ void cofactors(double num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double inv[MAX_MATR
 					}
 				}
 			}
-			fac[q][p] = (((q+p)&1)?-1:1) * detrminant(b, f - 1);
+			fac[q][p] = (((q+p)&1)?-1:1) * determinant(b, f - 1);
 		}
 	}
 	trans(num, inv, fac, f);
@@ -88,7 +88,7 @@ void trans(double num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double inv[MAX_MATRIX_S
 			b[i][j] = fac[j][i];
 		}
 	}
-	d = detrminant(num, r);
+	d = determinant(num, r);
 	//inv[i][j] = 0;
 	for (i = 0; i < r; i++) {
 		for (j = 0; j < r; j++) {
@@ -97,8 +97,8 @@ void trans(double num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], double inv[MAX_MATRIX_S
 	}
 }
 
-PseudoFloat detrminant(PseudoFloat a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
-	PseudoFloat s = 1, det = 0, b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE];
+PseudoDouble determinant(PseudoDouble a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
+	PseudoDouble s = 1, det = 0, b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE];
 	int i, j, m, n, c;
 	if (k == 1) {
 		return (a[0][0]);
@@ -120,15 +120,15 @@ PseudoFloat detrminant(PseudoFloat a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int k) {
 					}
 				}
 			}
-			det = det + s * (a[0][c] * detrminant(b, k - 1));
-			s = PseudoFloat(-1) * s;
+			det = det + s * (a[0][c] * determinant(b, k - 1));
+			s = PseudoDouble(-1) * s;
 		}
 	}
 	return (det);
 }
  
-void cofactors(PseudoFloat num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int f) {
-	PseudoFloat b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], fac[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE];
+void cofactors(PseudoDouble num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int f) {
+	PseudoDouble b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], fac[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE];
 	int p, q, m, n, i, j;
 	for (q = 0; q < f; q++) {
 		for (p = 0; p < f; p++) {
@@ -147,21 +147,21 @@ void cofactors(PseudoFloat num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat in
 					}
 				}
 			}
-			fac[q][p] = PseudoFloat((((q+p)&1)?-1:1)) * detrminant(b, f - 1);
+			fac[q][p] = PseudoDouble((((q+p)&1)?-1:1)) * determinant(b, f - 1);
 		}
 	}
 	trans(num, inv, fac, f);
 }
  
-void trans(PseudoFloat num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat fac[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int r) {
+void trans(PseudoDouble num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoDouble fac[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], int r) {
 	int i, j;
-	PseudoFloat b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], d;
+	PseudoDouble b[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], d;
 	for (i = 0; i < r; i++) {
 		for (j = 0; j < r; j++) {
 			b[i][j] = fac[j][i];
 		}
 	}
-	d = detrminant(num, r);
+	d = determinant(num, r);
 	//inv[i][j] = 0;
 	for (i = 0; i < r; i++) {
 		for (j = 0; j < r; j++) {
@@ -173,7 +173,7 @@ void trans(PseudoFloat num[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], PseudoFloat inv[MA
 int main(int, char**) {
 	srand(0);
 	double a[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], inv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], aa[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], d;
-	PseudoFloat pa[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], pinv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], paa[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], pd;
+	PseudoDouble pa[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], pinv[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], paa[MAX_MATRIX_SIZE][MAX_MATRIX_SIZE], pd;
 	int i, j, n=MAX_MATRIX_SIZE;
 	for (i = 0; i < n; i++) {
 		for (j = 0; j < n; j++) {
@@ -189,7 +189,7 @@ int main(int, char**) {
 		}
 		printf("\n");
 	}
-	d = detrminant(a, n);
+	d = determinant(a, n);
 	printf("\nTHE DETERMINANT IS=%2f\n", d);
 	if (d == 0)
 		printf("\nMATRIX IS NOT INVERSIBLE\n");
@@ -241,17 +241,17 @@ int main(int, char**) {
 	}
 	{
 		double a=1,b=0.3;
-		PseudoFloat pa=1,pb=b;
+		PseudoDouble pa=1,pb=b;
 		uint64_t t0=get_thread_time();
 		for(int i=0;i<1000000000;i++) {
 			a=a+(b*b);
 			b=1-b;
 		}
-		PseudoFloat dec(0.1);
+		PseudoDouble dec(0.1);
 		uint64_t t1=get_thread_time();
 		for(int i=0;i<1000000000;i++) {
 			pa=pa+pb*pb;
-			pb=PF_ONE-pb;
+			pb=PD_ONE-pb;
 		}
 		uint64_t t2=get_thread_time();
 		cout << "Converge time nodiv double=" << (t1-t0)*0.000000001 << endl;
@@ -261,7 +261,7 @@ int main(int, char**) {
 	}
 	{
 		double a=1,b=1;
-		PseudoFloat pa=1,pb=1;
+		PseudoDouble pa=1,pb=1;
 		uint64_t t0=get_thread_time();
 		for(int i=0;i<1000000000;i++) {
 			a=a+1/(b*b);
@@ -269,7 +269,7 @@ int main(int, char**) {
 		}
 		uint64_t t1=get_thread_time();
 		for(int i=0;i<1000000000;i++) {
-			pa=pa+PF_ONE/(pb*pb);
+			pa=pa+PD_ONE/(pb*pb);
 			pb=pa-pa*pa;
 		}
 		uint64_t t2=get_thread_time();
