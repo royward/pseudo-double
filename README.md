@@ -1,4 +1,4 @@
-# pseudo-float
+# pseudo-double
 
 A relatively fast C and C++ 64 bit floating point library written using only integer operations for cross platform consistency.
 
@@ -8,7 +8,7 @@ This is a partial floating point library that only uses integer CPU instructions
 
 https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-procedural-generation
 
-There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-float library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point.
+There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-double library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point.
 
 This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang. 
 
@@ -20,42 +20,42 @@ For most uses, the easiest option is to include the source files directly in you
 
 ## C
 
-pseudo_float is aliased to uint64_t
+pseudo_double is aliased to uint64_t
 
 ### Files
 
-**pseudo_float.h**: file to include to access the C functionality. Some of the basic functions are provided by inline functions.
+**pseudo_double.h**: file to include to access the C functionality. Some of the basic functions are provided by inline functions.
 
-**pseudo_float.c**: Add this into your project. This includes the functionality not provided by pseudo_float.h
+**pseudo_double.c**: Add this into your project. This includes the functionality not provided by pseudo_double.h
 
 ## C++
 
-PseudoFloat is provided as a class with operator overloading and function overloading are used to provide the same syntax as the standard floating point operations.
+PseudoDouble is provided as a class with operator overloading and function overloading are used to provide the same syntax as the standard floating point operations.
 
 ### Files
 
-**PseudoFloat.h**: file to include to access the C++ functionality
+**PseudoDouble.h**: file to include to access the C++ functionality
 
-**pseudo_float.cpp**: is just a C++ wrapper for pseudo_float.c
+**pseudo_double.cpp**: is just a C++ wrapper for pseudo_double.c
 
-**PseudoFloat_test.cpp**: a test for the rest of the library.
+**PseudoDouble_test.cpp**: a test for the rest of the library.
 
-**PseudoFloat_speed_test.cpp**: a simple speed test. 10x10 matrix inversion plus some short loop tests.
+**PseudoDouble_speed_test.cpp**: a simple speed test. 10x10 matrix inversion plus some short loop tests.
 
 ### Running the tests
 
 To built the library test:
 
-	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_float_test pseudo_float.cpp PseudoFloat_test.cpp
+	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_double_test pseudo_double.cpp PseudoDouble_test.cpp
 
 When the generated executable is run, it will print out a line for any failed tests, followed by a count of tests passed/done:
 
-	./pseudo_float_test 
+	./pseudo_double_test 
 	Tests done, passed 3863863/3863863
 
 Similarly, the speed tests can be built using:
 
-	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_float_speed_test pseudo_float.cpp PseudoFloat_speed_test.cpp
+	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_double_speed_test pseudo_double.cpp PseudoDouble_speed_test.cpp
 
 # Funtions supported
 
@@ -65,9 +65,9 @@ See Functions.md for details of all the provided functions.
 
 * **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, atan2, abs, fabs
 
-* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-float creation
+* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-double creation
 
-* **Functions not currently supported by pseudo-float**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
+* **Functions not currently supported by pseudo-double**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
 
 # Overflows
 
@@ -81,7 +81,7 @@ C++ default: throw std::overflow_error("overflow")
 
 PF_DO_ERROR_UNDERFLOW  
 C default: return 0  
-C++ default: return PseudoFloat(0)
+C++ default: return PseudoDouble(0)
 
 PF_DO_ERROR_RANGE  
 C default: return PF_NAN  
@@ -97,13 +97,13 @@ This library is designed to be a tradeoff between speed and accuracy. It does no
 
 Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
 
-	float:  32             speed  range
+	double: 32             speed  range
 	double: 64  precision  speed  range
 	fixed:  32             speed         consistency
 	fixed:  64  precision  speed         consistency
 	pseudo: 64  precision         range  consistency
 
-Pseudo Floats are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as float, double or fixed. The pseudo-float library does not use 
+Pseudo Doubles are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as double, double or fixed. The pseudo-double library does not use 
 
 # Underlying structure
 
@@ -117,7 +117,7 @@ For reference, an IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 
 
 0 is represented by all zeros, -0 is represented by a 1 sign bit, the rest zero.
 
-Pseudo floats have a 48 bit signed mantissa (no bits removed), and a 16 bit exponent:
+Pseudo doubles have a 48 bit signed mantissa (no bits removed), and a 16 bit exponent:
 
 	mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmeeeeeeeeeeeeeeee
 	6666555555555544444444443333333333222222222211111111110000000000
@@ -131,7 +131,7 @@ There is an overflow value represented by all 1 bits. It is is returned in cases
 * a signed mantissa rather than a separate sign bit means less branching and branches are more predictable.
 * putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be does by looking at the integer values.
 * the exponent in the least significant bits means that ldexp can be done with increment/decrement (except in the case of overflow).
-* pseudo floats don't use denormalized representations - it's a lot of extra checking (cheap in hardware, expensive in software) for only a small increase in dynamic range. Unless set up to return some sort of error, underflows go straight to zero.
+* pseudo doubles don't use denormalized representations - it's a lot of extra checking (cheap in hardware, expensive in software) for only a small increase in dynamic range. Unless set up to return some sort of error, underflows go straight to zero.
 
 Except for zero and PF_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
 

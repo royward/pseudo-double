@@ -52,26 +52,38 @@ The form of these is:
 
 ## Conversion
 
+### convert double to pseudo-float
+
 	C: pseudo_float double_to_pf(double d);
 	C++: inline PseudoFloat(double f);
+
+### convert signed integer to pseudo-float
 
 	C: pseudo_float int64_to_pf(int64_t d);
 	C++: inline PseudoFloat(int16_t f);
 	C++: inline PseudoFloat(int32_t f);
 	C++: inline PseudoFloat(int64_t f);
 
+### convert unsigned integer to pseudo-float
+
 	C: pseudo_float uint64_to_pf(uint64_t d);
 	C++: inline PseudoFloat(uint16_t f);
 	C++: inline PseudoFloat(uint32_t f);
 	C++: inline PseudoFloat(uint64_t f);
 
+### convert pseudo-float to double
+
 	C: double pf_to_double(pseudo_float d);
 	C++: inline operator double() const {return pf_to_double(val);}
+
+### convert pseudo-float to signed integer
 
 	C: int64_t pf_to_int64(pseudo_float d);
 	C++: inline operator PseudoFloat::int16_t() const;
 	C++: inline operator PseudoFloat::int32_t() const;
 	C++: inline operator PseudoFloat::int64_t() const;
+
+### convert pseudo-float to unsigned integer
 
 	C: uint64_t pf_to_uint64(pseudo_float d);
 	C++: inline operator PseudoFloat::uint16_t() const;
@@ -179,9 +191,9 @@ The base fuctions are pf_exp2 and pf_log2, so:
 
 ## Trigonometry
 
-Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is 2pi radians.
+Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is 2$\pi$ radians.
 
-The following identities are exactly true for all integer n and pseudofloat x>0,y>0:
+The following identities are exactly true for all integer n and pseudofloat x>0:
 
 * pf_sin_rev(n/2)=0
 * pf_sin_rev(n+1/4)=1
@@ -192,11 +204,11 @@ The following identities are exactly true for all integer n and pseudofloat x>0,
 * pf_atan2_rev(0,0)  =0
 * pf_atan2_rev(0,x)  =0
 * pf_atan2_rev(x,x)  =1/8
-* pf_atan2_rev(y,0)  =1/4
+* pf_atan2_rev(x,0)  =1/4
 * pf_atan2_rev(x,-x) =3/8
 * pf_atan2_rev(0,-x) =1/2
 * pf_atan2_rev(-x,-x)=5/8
-* pf_atan2_rev(-y,0) =3/4
+* pf_atan2_rev(-x,0) =3/4
 * pf_atan2_rev(-x,x) =7/8
 
 ### sin of revolutions
