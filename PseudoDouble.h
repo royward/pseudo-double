@@ -146,4 +146,4 @@ const static PseudoDouble PD_2_DIV_PI=PD_ONE/PD_PI_DIV_2;
 const static PseudoDouble PD_INV_PI=PD_ONE/PD_PI;
 const static PseudoDouble PD_INV_TAU=PD_ONE/PD_TAU;
 
-#endif
+#endif // PSEUDO_DOUBLE_CPP_H

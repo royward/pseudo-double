@@ -167,7 +167,7 @@ inline int pd_gt(pseudo_double x, pseudo_double y) {
 	if(expdiff!=0) {
 		return (expdiff>0)^neg;
 	}
-	// exponents are the same, check mantissa
+	// exponents are the same so don't need to mask off, check mantissa
 	return (x>y);
 }
 
@@ -181,7 +181,7 @@ inline int pd_gte(pseudo_double x, pseudo_double y) {
 	if(expdiff!=0) {
 		return (expdiff>0)^neg;
 	}
-	// exponents are the same, check mantissa
+	// exponents are the same so don't need to mask off, check mantissa
 	return (x>=y);
 }
 
