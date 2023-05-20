@@ -28,4 +28,5 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // just a quick wrapper so don't need to deal with separate C targets in the Makefile
+
 #include "pseudo_double.c"

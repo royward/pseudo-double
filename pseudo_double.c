@@ -913,4 +913,3 @@ pseudo_double pd_round(pseudo_double x) {
 #endif
 	return (pseudo_double)(vr+new_exponent);
 }
-
