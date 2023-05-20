@@ -15,237 +15,237 @@ The form of these is:
 
 	mlib: x==y
 	C: (use integer x==y)
-	inline bool PseudoFloat::operator==(const PseudoFloat x) const;
+	inline bool PseudoDouble::operator==(const PseudoDouble x) const;
 
 ### Not equal
 
 	mlib: x!=y
 	C: (use integer x!=y)
-	inline bool PseudoFloat::operator!=(const PseudoFloat x) const;
+	inline bool PseudoDouble::operator!=(const PseudoDouble x) const;
 
 ### Greater than or equal to
 
 	mlib: x>=y
-	C: inline int pf_gte(pseudo_float x, pseudo_float y);
-	inline bool PseudoFloat::operator>=(const PseudoFloat x) const;
+	C: inline int pd_gte(pseudo_double x, pseudo_double y);
+	inline bool PseudoDouble::operator>=(const PseudoDouble x) const;
 
 ### Less than
 
 	mlib: x<y
-	C: (use pf_gt with reversed arguments)
-	inline bool PseudoFloat::operator<(const PseudoFloat x) const;
+	C: (use pd_gt with reversed arguments)
+	inline bool PseudoDouble::operator<(const PseudoDouble x) const;
 
 ### Less than or equal to
 
 	mlib: x<=y
-	C: (use pf_gte with reversed arguments)
-	inline bool PseudoFloat::operator<=(const PseudoFloat x) const;
+	C: (use pd_gte with reversed arguments)
+	inline bool PseudoDouble::operator<=(const PseudoDouble x) const;
 
 ## Quick comparison with 0. For C, just do a straight integer comparison with zero
 
-	C++: inline bool PseudoFloat::gt_zero() const;
-	C++: inline bool PseudoFloat::gte_zero() const;
-	C++: inline bool PseudoFloat::lt_zero() const;
-	C++: inline bool PseudoFloat::lte_zero() const;
-	C++: inline bool PseudoFloat::eq_zero() const;
-	C++: inline bool PseudoFloat::neq_zero() const;
+	C++: inline bool PseudoDouble::gt_zero() const;
+	C++: inline bool PseudoDouble::gte_zero() const;
+	C++: inline bool PseudoDouble::lt_zero() const;
+	C++: inline bool PseudoDouble::lte_zero() const;
+	C++: inline bool PseudoDouble::eq_zero() const;
+	C++: inline bool PseudoDouble::neq_zero() const;
 
 ## Conversion
 
-### convert double to pseudo-float
+### convert double to pseudo-double
 
-	C: pseudo_float double_to_pf(double d);
-	C++: inline PseudoFloat(double f);
+	C: pseudo_double double_to_pd(double d);
+	C++: inline PseudoDouble(double f);
 
-### convert signed integer to pseudo-float
+### convert signed integer to pseudo-double
 
-	C: pseudo_float int64_to_pf(int64_t d);
-	C++: inline PseudoFloat(int16_t f);
-	C++: inline PseudoFloat(int32_t f);
-	C++: inline PseudoFloat(int64_t f);
+	C: pseudo_double int64_to_pd(int64_t d);
+	C++: inline PseudoDouble(int16_t f);
+	C++: inline PseudoDouble(int32_t f);
+	C++: inline PseudoDouble(int64_t f);
 
-### convert unsigned integer to pseudo-float
+### convert unsigned integer to pseudo-double
 
-	C: pseudo_float uint64_to_pf(uint64_t d);
-	C++: inline PseudoFloat(uint16_t f);
-	C++: inline PseudoFloat(uint32_t f);
-	C++: inline PseudoFloat(uint64_t f);
+	C: pseudo_double uint64_to_pd(uint64_t d);
+	C++: inline PseudoDouble(uint16_t f);
+	C++: inline PseudoDouble(uint32_t f);
+	C++: inline PseudoDouble(uint64_t f);
 
-### convert pseudo-float to double
+### convert pseudo-double to double
 
-	C: double pf_to_double(pseudo_float d);
-	C++: inline operator double() const {return pf_to_double(val);}
+	C: double pd_to_double(pseudo_double d);
+	C++: inline operator double() const {return pd_to_double(val);}
 
-### convert pseudo-float to signed integer
+### convert pseudo-double to signed integer
 
-	C: int64_t pf_to_int64(pseudo_float d);
-	C++: inline operator PseudoFloat::int16_t() const;
-	C++: inline operator PseudoFloat::int32_t() const;
-	C++: inline operator PseudoFloat::int64_t() const;
+	C: int64_t pd_to_int64(pseudo_double d);
+	C++: inline operator PseudoDouble::int16_t() const;
+	C++: inline operator PseudoDouble::int32_t() const;
+	C++: inline operator PseudoDouble::int64_t() const;
 
-### convert pseudo-float to unsigned integer
+### convert pseudo-double to unsigned integer
 
-	C: uint64_t pf_to_uint64(pseudo_float d);
-	C++: inline operator PseudoFloat::uint16_t() const;
-	C++: inline operator PseudoFloat::uint32_t() const;
-	C++: inline operator PseudoFloat::uint64_t() const;
+	C: uint64_t pd_to_uint64(pseudo_double d);
+	C++: inline operator PseudoDouble::uint16_t() const;
+	C++: inline operator PseudoDouble::uint32_t() const;
+	C++: inline operator PseudoDouble::uint64_t() const;
 
-	C: pseudo_float sint64fixed2_to_pf(int64_t d, int32_t e);
-	C++: int64_t pf_to_sint64fixed2(pseudo_float d, int32_t e);
-	C++: inline pseudo_float sint64fixed10_to_pf(int64_t d, int32_t e);
+	C: pseudo_double sint64fixed2_to_pd(int64_t d, int32_t e);
+	C++: int64_t pd_to_sint64fixed2(pseudo_double d, int32_t e);
+	C++: inline pseudo_double sint64fixed10_to_pd(int64_t d, int32_t e);
 
 ## Miscellaneous
 
 ### floor
 
 	mlib: floor(x)
-	C: pseudo_float pf_floor(pseudo_float x);
-	C++: PseudoFloat floor(const PseudoFloat x);
+	C: pseudo_double pd_floor(pseudo_double x);
+	C++: PseudoDouble floor(const PseudoDouble x);
 
 ### ceiling
 
 	mlib: ceil(x)
-	C: pseudo_float pf_ceil(pseudo_float x);
-	C++: PseudoFloat ceil(const PseudoFloat x);
+	C: pseudo_double pd_ceil(pseudo_double x);
+	C++: PseudoDouble ceil(const PseudoDouble x);
 
 ### round
 
 	mlib: round(x)
-	C: pseudo_float pf_round(pseudo_float x);
-	C++: PseudoFloat round(const PseudoFloat x);
+	C: pseudo_double pd_round(pseudo_double x);
+	C++: PseudoDouble round(const PseudoDouble x);
 	Returns the integral value that is nearest to x, with halfway cases rounded away from zero.
 
 ### ldexp
 
 	mlib: ldexp(x)
-	C: inline pseudo_float pf_ldexp(pseudo_float x, int y);
-	C++: PseudoFloat ldexp(const PseudoFloat x, int y);
+	C: inline pseudo_double pd_ldexp(pseudo_double x, int y);
+	C++: PseudoDouble ldexp(const PseudoDouble x, int y);
 
 ## Square root
 
 ### square root
 
 	mlib: sqrt(x)
-	C: pseudo_float pf_sqrt(pseudo_float x);
-	C++: PseudoFloat sqrt(const PseudoFloat x);
+	C: pseudo_double pd_sqrt(pseudo_double x);
+	C++: PseudoDouble sqrt(const PseudoDouble x);
 
 ### inverse square root
 
 	mlib: 1.0/sqrt(x)
-	C: pseudo_float pf_inv_sqrt(pseudo_float x);
-	C++: PseudoFloat inv_sqrt(const PseudoFloat x);
+	C: pseudo_double pd_inv_sqrt(pseudo_double x);
+	C++: PseudoDouble inv_sqrt(const PseudoDouble x);
 	This is faster than sqrt and useful for normalizing
 
 ## Helper functions
 
-	PseudoFloat PF_create_fixed10(int64_t x, int32_t e);
-	PseudoFloat PF_create_fixed2(int64_t x, int32_t e);
-	int64_t PF_get_fixed2(PseudoFloat x, int32_t e);
+	PseudoDouble PD_create_fixed10(int64_t x, int32_t e);
+	PseudoDouble PD_create_fixed2(int64_t x, int32_t e);
+	int64_t PD_get_fixed2(PseudoDouble x, int32_t e);
 
-	C++: inline pseudo_float PseudoFloat::get_internal() const;
+	C++: inline pseudo_double PseudoDouble::get_internal() const;
 
-	C++: inline void PseudoFloat::set_internal(pseudo_float f);
+	C++: inline void PseudoDouble::set_internal(pseudo_double f);
 
 ## Exponential and power functions
 
-The base fuctions are pf_exp2 and pf_log2, so:
+The base fuctions are pd_exp2 and pd_log2, so:
 
-* pf_exp2(n) is exactly 2^n (subject to no overflow)
-* pf_log2(2^n) is exactly n
+* pd_exp2(n) is exactly 2^n (subject to no overflow)
+* pd_log2(2^n) is exactly n
 
 ### binary exponent
 
 	mlib: exp2(x)
-	C: pseudo_float pf_exp2(pseudo_float x);
-	C++: PseudoFloat exp2(const PseudoFloat x);
+	C: pseudo_double pd_exp2(pseudo_double x);
+	C++: PseudoDouble exp2(const PseudoDouble x);
 
 ### logarithm base 2
 
 	mlib: log2(x)
-	C: pseudo_float pf_log2(pseudo_float x);
-	C++: PseudoFloat log2(const PseudoFloat x);
+	C: pseudo_double pd_log2(pseudo_double x);
+	C++: PseudoDouble log2(const PseudoDouble x);
 
 ### exponential function
 
 	mlib: exp(x)
-	C: pseudo_float pf_exp(pseudo_float x);
-	C++: PseudoFloat exp(const PseudoFloat x);
+	C: pseudo_double pd_exp(pseudo_double x);
+	C++: PseudoDouble exp(const PseudoDouble x);
 
 ### logarithm base e
 
 	mlib: log(x)
-	C: pseudo_float pf_log(pseudo_float x);
-	C++: PseudoFloat log(const PseudoFloat x);
+	C: pseudo_double pd_log(pseudo_double x);
+	C++: PseudoDouble log(const PseudoDouble x);
 
 ### logarithm base 10
 
 	mlib: log10(x)
-	C: pseudo_float pf_log10(pseudo_float x);
-	C++: PseudoFloat log10(const PseudoFloat x);
+	C: pseudo_double pd_log10(pseudo_double x);
+	C++: PseudoDouble log10(const PseudoDouble x);
 
 ### power, x^y
 
 	mlib: pow(x,y)
-	C: pseudo_float pf_pow(pseudo_float x, pseudo_float y);
-	C++: PseudoFloat pow(const PseudoFloat x, const PseudoFloat y);
+	C: pseudo_double pd_pow(pseudo_double x, pseudo_double y);
+	C++: PseudoDouble pow(const PseudoDouble x, const PseudoDouble y);
 
 ## Trigonometry
 
 Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is 2$\pi$ radians.
 
-The following identities are exactly true for all integer n and pseudofloat x>0:
+The following identities are exactly true for all integer n and pseudodouble x>0:
 
-* pf_sin_rev(n/2)=0
-* pf_sin_rev(n+1/4)=1
-* pf_sin_rev(n+3/4)=-1
-* pf_cos_rev(n/2+1/4)=0
-* pf_cos_rev(n)=1
-* pf_cos_rev(n+1/2)=-1
-* pf_atan2_rev(0,0)  =0
-* pf_atan2_rev(0,x)  =0
-* pf_atan2_rev(x,x)  =1/8
-* pf_atan2_rev(x,0)  =1/4
-* pf_atan2_rev(x,-x) =3/8
-* pf_atan2_rev(0,-x) =1/2
-* pf_atan2_rev(-x,-x)=5/8
-* pf_atan2_rev(-x,0) =3/4
-* pf_atan2_rev(-x,x) =7/8
+* pd_sin_rev(n/2)=0
+* pd_sin_rev(n+1/4)=1
+* pd_sin_rev(n+3/4)=-1
+* pd_cos_rev(n/2+1/4)=0
+* pd_cos_rev(n)=1
+* pd_cos_rev(n+1/2)=-1
+* pd_atan2_rev(0,0)  =0
+* pd_atan2_rev(0,x)  =0
+* pd_atan2_rev(x,x)  =1/8
+* pd_atan2_rev(x,0)  =1/4
+* pd_atan2_rev(x,-x) =3/8
+* pd_atan2_rev(0,-x) =1/2
+* pd_atan2_rev(-x,-x)=5/8
+* pd_atan2_rev(-x,0) =3/4
+* pd_atan2_rev(-x,x) =7/8
 
 ### sin of revolutions
 
 	mlib: sin(x*(2.0*M_PI))
-	C: pseudo_float pf_sin_rev(pseudo_float x);
-	C++: PseudoFloat sin_rev(const PseudoFloat x);
+	C: pseudo_double pd_sin_rev(pseudo_double x);
+	C++: PseudoDouble sin_rev(const PseudoDouble x);
 
 ### cos of revolutions
 
 	mlib: cos(x*(2.0*M_PI))
-	C: pseudo_float pf_cos_rev(pseudo_float x);
-	C++: PseudoFloat cos_rev(const PseudoFloat x);
+	C: pseudo_double pd_cos_rev(pseudo_double x);
+	C++: PseudoDouble cos_rev(const PseudoDouble x);
 
 ### atan2 in revolutions
 
 	mlib: atan2(y,x)/(2.0*M_PI)
-	C: pseudo_float pf_atan2_rev(pseudo_float y, pseudo_float x);
-	C++: PseudoFloat atan2_rev(const PseudoFloat y, const PseudoFloat x);
+	C: pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x);
+	C++: PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x);
 
 ### sin of radians
 
 	mlib: sin(x)
-	C: pseudo_float pf_sin(pseudo_float x);
-	C++: PseudoFloat sin(const PseudoFloat x);
+	C: pseudo_double pd_sin(pseudo_double x);
+	C++: PseudoDouble sin(const PseudoDouble x);
 
 ### cos of radians
 
 	mlib: cos(x)
-	C: pseudo_float pf_cos(pseudo_float x);
-	C++: PseudoFloat cos(const PseudoFloat x);
+	C: pseudo_double pd_cos(pseudo_double x);
+	C++: PseudoDouble cos(const PseudoDouble x);
 
 ### atan2 in radians
 
 	mlib: atan2(y,x)
-	C: pseudo_float pf_atan2(pseudo_float y, pseudo_float x);
-	C++: PseudoFloat atan2(const PseudoFloat y, const PseudoFloat x);
+	C: pseudo_double pd_atan2(pseudo_double y, pseudo_double x);
+	C++: PseudoDouble atan2(const PseudoDouble y, const PseudoDouble x);
 
 ## Fixed integer helper functions
 

@@ -303,6 +303,30 @@ int main() {
 	}
 	cout << "Tests done, passed " << (count-failures) << '/' << count << endl;
 
+/*
+	// Code examples
+	{
+		PseudoDouble a=PD_create_fixed10(3,-1); // 0.3
+		PseudoDouble b=-4;
+		PseudoDouble c=6;
+		PseudoDouble disc=sqrt(b*b-PseudoDouble(4)*a*c);
+		PseudoDouble sol1=(-b-disc)/(PseudoDouble(2)*a);
+		PseudoDouble sol2=(-b+disc)/(PseudoDouble(2)*a);
+		std::cout << "C++: Solution 1 = " << sol1 << std::endl;
+		std::cout << "C++: Solution 2 = " << sol2 << std::endl;
+	}
+	{
+		pseudo_double a=int64fixed10_to_pd(3,-1); // 0.3
+		pseudo_double b=int64_to_pd(-4);
+		pseudo_double c=int64_to_pd(6);
+		pseudo_double disc=pd_sqrt(pd_sub(pd_mult(b,b),pd_mult(pd_mult(int64_to_pd(4),a),c)));
+		pseudo_double sol1=pd_div(pd_sub(pd_neg(b),disc),pd_mult(int64_to_pd(2),a));
+		pseudo_double sol2=pd_div(pd_add(pd_neg(b),disc),pd_mult(int64_to_pd(2),a));
+		printf("C: Solution 1 = %lf\n",pd_to_double(sol1));
+		printf("C: Solution 2 = %lf\n",pd_to_double(sol2));
+	}
+*/
+	
 // This can be modified to test indivual internal functions
 // 	for(uint64_t i=0x4000000000000000ULL;i<=0xFF00000000000000ULL;i+=0x40000000000000ULL) {
 // 		cout << hex << i << ' ' << inv_sqrt64_internal(i) << dec << endl;
