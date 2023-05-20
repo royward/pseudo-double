@@ -71,7 +71,9 @@ The form of these is:
 	C: (use pd_gte with reversed arguments)
 	inline bool PseudoDouble::operator<=(const PseudoDouble x) const;
 
-## Quick comparison with 0. For C, just do a straight integer comparison with zero
+## Quick comparison with 0.
+
+For C, just do a straight integer comparison with zero
 
 	C++: inline bool PseudoDouble::gt_zero() const;
 	C++: inline bool PseudoDouble::gte_zero() const;
