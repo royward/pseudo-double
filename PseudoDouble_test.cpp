@@ -211,20 +211,24 @@ int main() {
 			failures++;
 			cout << "round  " << round(f) << ' ' << ff << endl;
 		}
-		if(!isinf(exp2(f)) && f!=-1024.0) {
-			count++;
-			ff=exp2(pd);
-			if(!compare(exp2(f),ff,NEAR_EXACT12)) {
-				failures++;
-				cout << "exp2  " << setprecision(15) << f << ' ' << setprecision(15) << exp2(f) << ' ' << setprecision(15) << ff << endl;
+		if(!isinf(exp2(f))/* && f!=-1024.0*/) {
+			if(f<128 && f>-128) {
+				count++;
+				ff=exp2(pd);
+				if(!compare(exp2(f),ff,NEAR_EXACT12)) {
+					failures++;
+					cout << "exp2  " << setprecision(15) << f << ' ' << setprecision(15) << exp2(f) << ' ' << setprecision(15) << ff << endl;
+				}
 			}
 		}
 		if(!isinf(exp(f))) {
-			ff=exp(pd);
-			count++;
-			if(!compare(exp(f),ff,NEAR_EXACT11)) {
-				failures++;
-				cout << "exp  " << setprecision(15) << f << ' ' << setprecision(15) << exp(f) << ' ' << setprecision(15) << ff << endl;
+			if(f<96 && f>-96) {
+				ff=exp(pd);
+				count++;
+				if(!compare(exp(f),ff,NEAR_EXACT11)) {
+					failures++;
+					cout << "exp  " << setprecision(15) << f << ' ' << setprecision(15) << exp(f) << ' ' << setprecision(15) << ff << endl;
+				}
 			}
 		}
 		if(f>0) {
@@ -271,7 +275,7 @@ int main() {
 		PseudoDouble pd1=f1;
 		for(uint32_t j=0;j<list.size();j++) {
 			double f2=list[j];
-			if(f1>0 && !isinf(pow(f1,f2)) && pow(f1,f2)>1e-300) {
+			if(f1>0 && !isinf(pow(f1,f2)) && pow(f1,f2)>1e-35 && pow(f1,f2)<1e35) {
 				PseudoDouble pd2=f2;
 				double ff;
 				ff=pow(pd1,pd2);

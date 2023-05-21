@@ -157,13 +157,14 @@ This library is designed to be a tradeoff between speed and accuracy. It does no
 
 Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
 
-| Type          | Bit size | Precision (bits) | Range                                       | Consistency |
-| ------------- | -------- | ---------------- | ------------------------------------------- | ----------- |
-| float         | 32       | 53               | $\pm(1.18\times 10^{-38} \ldots 3.4\times 10^{38})$   | no          |
-| double        | 64       | 24               | $\pm(2.23\times 10^{-308} \ldots 1.8\times 10^{308})$ | no          |
-| fixed         | 32       | 0 ... 31         | $\pm c(1 \ldots 2.1\times 10^{9})$                  | yes         |
-| fixed         | 64       | 0 ... 63         | $\pm c(1 \ldots 9.2\times 10^{18})$                 | yes         |
-| pseudo-double | 64       | 47               | large                                       | yes         |
+| Type          | Bit size | Bits exponent | Precision (bits) | Range                                                    | Consistency |
+| ------------- | -------- | ------------- | ---------------- | -------------------------------------------------------- | ----------- |
+| float         | 32       | 8             | 53               | $\pm(1.18\times 10^{-38} \ldots 3.4\times 10^{38})$      | no          |
+| double        | 64       | 11            | 24               | $\pm(2.23\times 10^{-308} \ldots 1.8\times 10^{308})$    | no          |
+| fixed         | 32       | 0             | 0 ... 31 $\ast$  | $\pm c(1 \ldots 2.1\times 10^{9})$                       | yes         |
+| fixed         | 64       | 0             | 0 ... 63 $\ast$  | $\pm c(1 \ldots 9.2\times 10^{18})$                      | yes         |
+| pseudo-double | 64       | 16 $\dagger$  | 47               | $\pm(2.10\times 10^{-4933} \ldots 5.95\times 10^{4931})$ | yes         |
+| pseudo-double | 64       | 8 $\dagger$   | 55               | $\pm(7.35\times 10^{-40} \ldots 1.71\times 10^{38})$     | yes         |
 
 Pseudo Doubles are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as double, double or fixed. The pseudo-double library does not use 
 
