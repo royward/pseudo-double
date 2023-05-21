@@ -52,7 +52,7 @@ const static double NEAR_EXACT5 =0.99999;
 const static double NEAR_EXACT4 =0.9999;
 const static double NEAR_EXACT3 =0.999;
 
-void debug_pd_output(pseudo_double x) {
+void debug_pd_output(pseudo_double_i x) {
 	signed_pd_internal mant=x&EXP_MASK_INV;
 	int64_t exponent=x&EXP_MASK;
 	printf("m=");
@@ -303,8 +303,18 @@ int main() {
 	}
 	cout << "Tests done, passed " << (count-failures) << '/' << count << endl;
 
-/*
-	// Code examples
+
+	// Code examples from README.md
+	{
+		double a=0.3;
+		double b=-4.0;
+		double c=6.0;
+		double disc=sqrt(b*b-4.0*a*c);
+		double sol1=(-b-disc)/(2.0*a);
+		double sol2=(-b+disc)/(2.0*a);
+		printf("C: Solution 1 = %lf\n",sol1);
+		printf("C: Solution 2 = %lf\n",sol2);
+	}
 	{
 		PseudoDouble a=PD_create_fixed10(3,-1); // 0.3
 		PseudoDouble b=-4;
@@ -325,7 +335,17 @@ int main() {
 		printf("C: Solution 1 = %lf\n",pd_to_double(sol1));
 		printf("C: Solution 2 = %lf\n",pd_to_double(sol2));
 	}
-*/
+	{
+		pseudo_double_i a=int64fixed10_to_pdi(3,-1); // 0.3
+		pseudo_double_i b=int64_to_pdi(-4);
+		pseudo_double_i c=int64_to_pdi(6);
+		pseudo_double_i disc=pdi_sqrt(pdi_sub(pdi_mult(b,b),pdi_mult(pdi_mult(int64_to_pdi(4),a),c)));
+		pseudo_double_i sol1=pdi_div(pdi_sub(pdi_neg(b),disc),pdi_mult(int64_to_pdi(2),a));
+		pseudo_double_i sol2=pdi_div(pdi_add(pdi_neg(b),disc),pdi_mult(int64_to_pdi(2),a));
+		printf("C (unsafe): Solution 1 = %lf\n",pdi_to_double(sol1));
+		printf("C (unsafe): Solution 2 = %lf\n",pdi_to_double(sol2));
+	}
+
 	
 // This can be modified to test indivual internal functions
 // 	for(uint64_t i=0x4000000000000000ULL;i<=0xFF00000000000000ULL;i+=0x40000000000000ULL) {

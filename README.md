@@ -44,9 +44,22 @@ PseudoDouble is provided as a class with operator overloading and function overl
 
 ### Example code
 
-Find the roots of 0.3\*x^2-4\*x+6
+Find the roots of 0.3\*x^2-4\*x+6 using the quadratic formula.
 
-#### C
+#### C/C++ With doubles
+
+This is some code with doubles as it might normally be done.
+
+	double a=0.3;
+	double b=-4.0;
+	double c=6.0;
+	double disc=sqrt(b*b-4.0*a*c);
+	double sol1=(-b-disc)/(2.0*a);
+	double sol2=(-b+disc)/(2.0*a);
+	printf("C: Solution 1 = %lf\n",sol1);
+	printf("C: Solution 2 = %lf\n",sol2);
+
+#### C with pseudo_double
 
 	pseudo_double a=int64fixed10_to_pd(3,-1); // 0.3
 	pseudo_double b=int64_to_pd(-4);
@@ -57,7 +70,13 @@ Find the roots of 0.3\*x^2-4\*x+6
 	printf("C: Solution 1 = %lf\n",pd_to_double(sol1));
 	printf("C: Solution 2 = %lf\n",pd_to_double(sol2));
 
-#### C++
+Note that we have to be careful constructing the a=0.3 The code:
+
+	pseudo_double a=double_to_pd(0.3);
+
+would also worth, but that is not dependent on hardware floating point, and may not be guaranteed to give the same result cross platform.
+
+#### C++ with PseudoDouble
 
 Here we get to make good use of operator and function overloading.
 
@@ -69,6 +88,19 @@ Here we get to make good use of operator and function overloading.
 	PseudoDouble sol2=(-b+disc)/(PseudoDouble(2)*a);
 	std::cout << "C++: Solution 1 = " << sol1 << std::endl;
 	std::cout << "C++: Solution 2 = " << sol2 << std::endl;
+
+#### C with pseudo_double_i (type unsafe)
+
+Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage.
+
+	pseudo_double_i a=int64fixed10_to_pdi(3,-1); // 0.3
+	pseudo_double_i b=int64_to_pdi(-4);
+	pseudo_double_i c=int64_to_pdi(6);
+	pseudo_double_i disc=pdi_sqrt(pdi_sub(pdi_mult(b,b),pdi_mult(pdi_mult(int64_to_pdi(4),a),c)));
+	pseudo_double_i sol1=pdi_div(pdi_sub(pdi_neg(b),disc),pdi_mult(int64_to_pdi(2),a));
+	pseudo_double_i sol2=pdi_div(pdi_add(pdi_neg(b),disc),pdi_mult(int64_to_pdi(2),a));
+	printf("C (unsafe): Solution 1 = %lf\n",pdi_to_double(sol1));
+	printf("C (unsafe): Solution 2 = %lf\n",pdi_to_double(sol2));
 
 ### Running the tests
 

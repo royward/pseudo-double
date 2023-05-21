@@ -46,46 +46,46 @@
 class PseudoDouble {
 public:
 	PseudoDouble() {val=0;};
-	inline PseudoDouble(double f) {val=double_to_pd(f);}
-	inline PseudoDouble(int16_t f) {val=int64_to_pd(f);}
-	inline PseudoDouble(int32_t f) {val=int64_to_pd(f);}
-	inline PseudoDouble(int64_t f) {val=int64_to_pd(f);}
-	inline PseudoDouble(uint16_t f) {val=uint64_to_pd(f);}
-	inline PseudoDouble(uint32_t f) {val=uint64_to_pd(f);}
-	inline PseudoDouble(uint64_t f) {val=uint64_to_pd(f);}
-	inline operator double() const {return pd_to_double(val);}
-	inline operator int16_t() const {return pd_to_int64(val);}
-	inline operator int32_t() const {return pd_to_int64(val);}
-	inline operator int64_t() const {return pd_to_int64(val);}
-	inline operator uint16_t() const {return pd_to_uint64(val);}
-	inline operator uint32_t() const {return pd_to_uint64(val);}
-	inline operator uint64_t() const {return pd_to_uint64(val);}
-	inline PseudoDouble operator-() const {return PseudoDouble::create(pd_neg(val));}
-	inline PseudoDouble operator+(const PseudoDouble x) const {return PseudoDouble::create(pd_add(val,x.val));}
-	inline PseudoDouble operator-(const PseudoDouble x) const {return PseudoDouble::create(pd_sub(val,x.val));}
-	inline PseudoDouble operator*(const PseudoDouble x) const {return PseudoDouble::create(pd_mult(val,x.val));}
-	inline PseudoDouble operator/(const PseudoDouble x) const {return PseudoDouble::create(pd_div(val,x.val));}
-	inline PseudoDouble operator+=(const PseudoDouble x) {val=pd_add(val,x.val); return *this;}
-	inline PseudoDouble operator-=(const PseudoDouble x) {val=pd_sub(val,x.val); return *this;}
-	inline PseudoDouble operator*=(const PseudoDouble x) {val=pd_mult(val,x.val); return *this;}
-	inline PseudoDouble operator/=(const PseudoDouble x) {val=pd_div(val,x.val); return *this;}
+	inline PseudoDouble(double f) {val=double_to_pdi(f);}
+	inline PseudoDouble(int16_t f) {val=int64_to_pdi(f);}
+	inline PseudoDouble(int32_t f) {val=int64_to_pdi(f);}
+	inline PseudoDouble(int64_t f) {val=int64_to_pdi(f);}
+	inline PseudoDouble(uint16_t f) {val=uint64_to_pdi(f);}
+	inline PseudoDouble(uint32_t f) {val=uint64_to_pdi(f);}
+	inline PseudoDouble(uint64_t f) {val=uint64_to_pdi(f);}
+	inline operator double() const {return pdi_to_double(val);}
+	inline operator int16_t() const {return pdi_to_int64(val);}
+	inline operator int32_t() const {return pdi_to_int64(val);}
+	inline operator int64_t() const {return pdi_to_int64(val);}
+	inline operator uint16_t() const {return pdi_to_uint64(val);}
+	inline operator uint32_t() const {return pdi_to_uint64(val);}
+	inline operator uint64_t() const {return pdi_to_uint64(val);}
+	inline PseudoDouble operator-() const {return PseudoDouble::create(pdi_neg(val));}
+	inline PseudoDouble operator+(const PseudoDouble x) const {return PseudoDouble::create(pdi_add(val,x.val));}
+	inline PseudoDouble operator-(const PseudoDouble x) const {return PseudoDouble::create(pdi_sub(val,x.val));}
+	inline PseudoDouble operator*(const PseudoDouble x) const {return PseudoDouble::create(pdi_mult(val,x.val));}
+	inline PseudoDouble operator/(const PseudoDouble x) const {return PseudoDouble::create(pdi_div(val,x.val));}
+	inline PseudoDouble operator+=(const PseudoDouble x) {val=pdi_add(val,x.val); return *this;}
+	inline PseudoDouble operator-=(const PseudoDouble x) {val=pdi_sub(val,x.val); return *this;}
+	inline PseudoDouble operator*=(const PseudoDouble x) {val=pdi_mult(val,x.val); return *this;}
+	inline PseudoDouble operator/=(const PseudoDouble x) {val=pdi_div(val,x.val); return *this;}
 	inline bool operator==(const PseudoDouble x) const {return val==x.val;}
 	inline bool operator!=(const PseudoDouble x) const {return val!=x.val;}
-	inline bool operator>(const PseudoDouble x) const {return pd_gt(val,x.val);}
-	inline bool operator>=(const PseudoDouble x) const {return pd_gte(val,x.val);}
-	inline bool operator<(const PseudoDouble x) const {return pd_gt(x.val,val);}
-	inline bool operator<=(const PseudoDouble x) const {return pd_gte(x.val,val);}
+	inline bool operator>(const PseudoDouble x) const {return pdi_gt(val,x.val);}
+	inline bool operator>=(const PseudoDouble x) const {return pdi_gte(val,x.val);}
+	inline bool operator<(const PseudoDouble x) const {return pdi_gt(x.val,val);}
+	inline bool operator<=(const PseudoDouble x) const {return pdi_gte(x.val,val);}
 	inline bool gt_zero() const {return ((signed_pd_internal)val)>(signed_pd_internal)0;}
 	inline bool gte_zero() const {return ((signed_pd_internal)val)>=(signed_pd_internal)0;}
 	inline bool lt_zero() const {return ((signed_pd_internal)val)<(signed_pd_internal)0;}
 	inline bool lte_zero() const {return ((signed_pd_internal)val)<=(signed_pd_internal)0;}
 	inline bool eq_zero() const {return ((signed_pd_internal)val)==(signed_pd_internal)0;}
 	inline bool neq_zero() const {return ((signed_pd_internal)val)!=(signed_pd_internal)0;}
-	inline pseudo_double get_internal() const {return val;}
-	inline void set_internal(pseudo_double f) {val=f;}
+	inline pseudo_double_i get_internal() const {return val;}
+	inline void set_internal(pseudo_double_i f) {val=f;}
 private:
-	static PseudoDouble create(pseudo_double pd) {PseudoDouble ret;ret.val=pd;return ret;}
-	pseudo_double val;
+	static PseudoDouble create(pseudo_double_i pdi) {PseudoDouble ret;ret.val=pdi;return ret;}
+	pseudo_double_i val;
 	friend PseudoDouble floor(const PseudoDouble x);
 	friend PseudoDouble ceil(const PseudoDouble x);
 	friend PseudoDouble round(const PseudoDouble x);
@@ -111,29 +111,29 @@ private:
 	friend int64_t PD_get_fixed2(PseudoDouble x, int32_t e);
 };
 
-inline PseudoDouble floor(const PseudoDouble x) {return PseudoDouble::create(pd_floor(x.val));}
-inline PseudoDouble ceil(const PseudoDouble x) {return PseudoDouble::create(pd_ceil(x.val));}
-inline PseudoDouble round(const PseudoDouble x) {return PseudoDouble::create(pd_round(x.val));}
-inline PseudoDouble sqrt(const PseudoDouble x) {return PseudoDouble::create(pd_sqrt(x.val));}
-inline PseudoDouble inv_sqrt(const PseudoDouble x) {return PseudoDouble::create(pd_inv_sqrt(x.val));}
-inline PseudoDouble ldexp(const PseudoDouble x, int y) {return PseudoDouble::create(pd_ldexp(x.val,y));}
-inline PseudoDouble exp2(const PseudoDouble x) {return PseudoDouble::create(pd_exp2(x.val));}
-inline PseudoDouble exp(const PseudoDouble x) {return PseudoDouble::create(pd_exp(x.val));}
-inline PseudoDouble log2(const PseudoDouble x) {return PseudoDouble::create(pd_log2(x.val));}
-inline PseudoDouble log(const PseudoDouble x) {return PseudoDouble::create(pd_log(x.val));}
-inline PseudoDouble log10(const PseudoDouble x) {return PseudoDouble::create(pd_log10(x.val));}
-inline PseudoDouble pow(const PseudoDouble x, const PseudoDouble y) {return PseudoDouble::create(pd_pow(x.val,y.val));}
-inline PseudoDouble sin_rev(const PseudoDouble x) {return PseudoDouble::create(pd_sin_rev(x.val));}
-inline PseudoDouble cos_rev(const PseudoDouble x) {return PseudoDouble::create(pd_cos_rev(x.val));}
-inline PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x) {return PseudoDouble::create(pd_atan2_rev(y.val,x.val));}
-inline PseudoDouble sin(const PseudoDouble x) {return PseudoDouble::create(pd_sin(x.val));}
-inline PseudoDouble cos(const PseudoDouble x) {return PseudoDouble::create(pd_cos(x.val));}
-inline PseudoDouble atan2(const PseudoDouble y, const PseudoDouble x) {return PseudoDouble::create(pd_atan2(y.val,x.val));}
-inline PseudoDouble abs(const PseudoDouble x) {return PseudoDouble::create(pd_abs(x.val));}
-inline PseudoDouble fabs(const PseudoDouble x) {return PseudoDouble::create(pd_abs(x.val));}
-inline PseudoDouble PD_create_fixed10(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed10_to_pd(x,e));}
-inline PseudoDouble PD_create_fixed2(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed2_to_pd(x,e));}
-inline int64_t PD_get_fixed2(PseudoDouble x, int32_t e) {return pd_to_int64fixed2(x.val,e);}
+inline PseudoDouble floor(const PseudoDouble x) {return PseudoDouble::create(pdi_floor(x.val));}
+inline PseudoDouble ceil(const PseudoDouble x) {return PseudoDouble::create(pdi_ceil(x.val));}
+inline PseudoDouble round(const PseudoDouble x) {return PseudoDouble::create(pdi_round(x.val));}
+inline PseudoDouble sqrt(const PseudoDouble x) {return PseudoDouble::create(pdi_sqrt(x.val));}
+inline PseudoDouble inv_sqrt(const PseudoDouble x) {return PseudoDouble::create(pdi_inv_sqrt(x.val));}
+inline PseudoDouble ldexp(const PseudoDouble x, int y) {return PseudoDouble::create(pdi_ldexp(x.val,y));}
+inline PseudoDouble exp2(const PseudoDouble x) {return PseudoDouble::create(pdi_exp2(x.val));}
+inline PseudoDouble exp(const PseudoDouble x) {return PseudoDouble::create(pdi_exp(x.val));}
+inline PseudoDouble log2(const PseudoDouble x) {return PseudoDouble::create(pdi_log2(x.val));}
+inline PseudoDouble log(const PseudoDouble x) {return PseudoDouble::create(pdi_log(x.val));}
+inline PseudoDouble log10(const PseudoDouble x) {return PseudoDouble::create(pdi_log10(x.val));}
+inline PseudoDouble pow(const PseudoDouble x, const PseudoDouble y) {return PseudoDouble::create(pdi_pow(x.val,y.val));}
+inline PseudoDouble sin_rev(const PseudoDouble x) {return PseudoDouble::create(pdi_sin_rev(x.val));}
+inline PseudoDouble cos_rev(const PseudoDouble x) {return PseudoDouble::create(pdi_cos_rev(x.val));}
+inline PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x) {return PseudoDouble::create(pdi_atan2_rev(y.val,x.val));}
+inline PseudoDouble sin(const PseudoDouble x) {return PseudoDouble::create(pdi_sin(x.val));}
+inline PseudoDouble cos(const PseudoDouble x) {return PseudoDouble::create(pdi_cos(x.val));}
+inline PseudoDouble atan2(const PseudoDouble y, const PseudoDouble x) {return PseudoDouble::create(pdi_atan2(y.val,x.val));}
+inline PseudoDouble abs(const PseudoDouble x) {return PseudoDouble::create(pdi_abs(x.val));}
+inline PseudoDouble fabs(const PseudoDouble x) {return PseudoDouble::create(pdi_abs(x.val));}
+inline PseudoDouble PD_create_fixed10(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed10_to_pdi(x,e));}
+inline PseudoDouble PD_create_fixed2(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed2_to_pdi(x,e));}
+inline int64_t PD_get_fixed2(PseudoDouble x, int32_t e) {return pdi_to_int64fixed2(x.val,e);}
 
 const static PseudoDouble PD_HALF=PD_create_fixed2(1,-1);
 const static PseudoDouble PD_ZERO=PseudoDouble(0);

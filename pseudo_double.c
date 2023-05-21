@@ -31,7 +31,7 @@
 #include <math.h>
 #include <stdio.h>
 
-pseudo_double double_to_pd(double d) {
+pseudo_double_i double_to_pdi(double d) {
 	union {
 		uint64_t i;
 		double d;
@@ -76,7 +76,7 @@ pseudo_double double_to_pd(double d) {
 	}
 }
 
-pseudo_double int64fixed2_to_pd(int64_t d, int32_t e) {
+pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e) {
 	if(d==0) {
 		return 0;
 	}
@@ -85,7 +85,7 @@ pseudo_double int64fixed2_to_pd(int64_t d, int32_t e) {
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits+e;
 }
 
-pseudo_double int64_to_pd(int64_t d) {
+pseudo_double_i int64_to_pdi(int64_t d) {
 	if(d==0) {
 		return 0;
 	}
@@ -94,7 +94,7 @@ pseudo_double int64_to_pd(int64_t d) {
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
-pseudo_double uint64_to_pd(uint64_t d) {
+pseudo_double_i uint64_to_pdi(uint64_t d) {
 	if(d==0) {
 		return 0;
 	}
@@ -102,7 +102,7 @@ pseudo_double uint64_to_pd(uint64_t d) {
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
-double pd_to_double(pseudo_double x) {
+double pdi_to_double(pseudo_double_i x) {
 	union {
 		uint64_t i;
 		double d;
@@ -137,7 +137,7 @@ double pd_to_double(pseudo_double x) {
 	return v.d;
 }
 
-int64_t pd_to_int64(pseudo_double x) {
+int64_t pdi_to_int64(pseudo_double_i x) {
 	if(x==0) {
 		return 0;
 	}
@@ -155,7 +155,7 @@ int64_t pd_to_int64(pseudo_double x) {
 	return ret;
 }
 
-int64_t pd_to_int64fixed2(pseudo_double x, int32_t e) {
+int64_t pdi_to_int64fixed2(pseudo_double_i x, int32_t e) {
 	if(x==0) {
 		return 0;
 	}
@@ -173,7 +173,7 @@ int64_t pd_to_int64fixed2(pseudo_double x, int32_t e) {
 	return ret;
 }
 
-uint64_t pd_to_uint64(pseudo_double x) {
+uint64_t pdi_to_uint64(pseudo_double_i x) {
 	if(((signed_pd_internal)x)<0) {
 		PF_DO_ERROR_RANGE;
 	}
@@ -248,7 +248,7 @@ uint32_t inv_sqrt32_internal(uint32_t x) {
 }
 ****************************************************************************************************/
 
-pseudo_double pd_inv_sqrt(pseudo_double x) {
+pseudo_double_i pdi_inv_sqrt(pseudo_double_i x) {
 #if PF_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
@@ -268,7 +268,7 @@ pseudo_double pd_inv_sqrt(pseudo_double x) {
 	return (inv_sqrt64_fixed(mantissa)&EXP_MASK_INV)+3*(PSEUDO_DOUBLE_EXP_BIAS>>1)+2-(exponent>>1);;
 }
 
-pseudo_double pd_sqrt(pseudo_double x) {
+pseudo_double_i pdi_sqrt(pseudo_double_i x) {
 #if PF_ERROR_CHECK
 	if(((signed_pd_internal)x)<0) {
 		PF_DO_ERROR_RANGE;
@@ -382,7 +382,7 @@ uint64_t log2_64_fixed(uint64_t x) {
 }
 
 // x^y = e^ln(x)^y = e^(y*ln(x))
-pseudo_double pd_pow(pseudo_double x, pseudo_double y) {
+pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 #if PF_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
@@ -396,7 +396,7 @@ pseudo_double pd_pow(pseudo_double x, pseudo_double y) {
 	int64_t expx;
 	if(e==0) {
 		if(log_frac==0) {
-			return uint64_to_pd(1); // 1^z=1
+			return uint64_to_pdi(1); // 1^z=1
 		}
 		int lead_bits=clz(log_frac);
 		vx=log_frac<<(lead_bits-1);
@@ -417,7 +417,7 @@ pseudo_double pd_pow(pseudo_double x, pseudo_double y) {
 	signed_pd_internal vr=(((signed_large_pd_internal)vx)*vy)>>64;
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
-		return uint64_to_pd(1); // 2^0=1
+		return uint64_to_pdi(1); // 2^0=1
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
@@ -462,12 +462,12 @@ pseudo_double pd_pow(pseudo_double x, pseudo_double y) {
 		PF_DO_ERROR_OVERFLOW;
 #endif
 	}
-	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pd_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
+	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV);
 
 }
 
-pseudo_double pd_log2(pseudo_double x) {
+pseudo_double_i pdi_log2(pseudo_double_i x) {
 #if PF_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
 		PF_DO_ERROR_RANGE;
@@ -491,14 +491,14 @@ pseudo_double pd_log2(pseudo_double x) {
 	int negative=(e<0);
 	int lead_bits=clz(negative?~e:e);
 	return (((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
-// 	printf("%16lx:%5.10f:%5.10f:%d:%16lx:%5.10f:%5.10f\n",x,pd_to_double(x),log2(pd_to_double(x)),e,mantissa,ldexp(1.0+ldexp(mantissa,-63),e),ldexp(log2_64_fixed(mantissa),-63));
+// 	printf("%16lx:%5.10f:%5.10f:%d:%16lx:%5.10f:%5.10f\n",x,pdi_to_double(x),log2(pdi_to_double(x)),e,mantissa,ldexp(1.0+ldexp(mantissa,-63),e),ldexp(log2_64_fixed(mantissa),-63));
 // 	return 0;
 }
 
 // e^x=(2^log2(e))^x=2^(log2(e)*x)
-pseudo_double pd_exp2(pseudo_double x) {
+pseudo_double_i pdi_exp2(pseudo_double_i x) {
 	if(x==0) {
-		return uint64_to_pd(1);
+		return uint64_to_pdi(1);
 	}
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
@@ -543,26 +543,26 @@ pseudo_double pd_exp2(pseudo_double x) {
 		PF_DO_ERROR_OVERFLOW;
 	}
 #endif
-	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pd_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
+	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV);
 }
 
-pseudo_double pd_exp(pseudo_double x) {
-	const pseudo_double log_2_e=int64fixed10_to_pd(1442695040888963407,-18);
-	return pd_exp2(pd_mult(x,log_2_e));
+pseudo_double_i pdi_exp(pseudo_double_i x) {
+	const pseudo_double_i log_2_e=int64fixed10_to_pdi(1442695040888963407,-18);
+	return pdi_exp2(pdi_mult(x,log_2_e));
 }
 
-static const pseudo_double pd_inv_log_2_e =int64fixed10_to_pd(6931471805599453094,-19);
-static const pseudo_double pd_inv_log_2_10=int64fixed10_to_pd(3010299956639811952,-19);
-static const pseudo_double pd_1_div_tau=pd_div(uint64_to_pd(1),int64fixed10_to_pd(6283185307179586477,-18));
-static const pseudo_double pd_tau=int64fixed10_to_pd(6283185307179586477,-18);
+static const pseudo_double_i pdi_inv_log_2_e =int64fixed10_to_pdi(6931471805599453094,-19);
+static const pseudo_double_i pdi_inv_log_2_10=int64fixed10_to_pdi(3010299956639811952,-19);
+static const pseudo_double_i pdi_1_div_tau=pdi_div(uint64_to_pdi(1),int64fixed10_to_pdi(6283185307179586477,-18));
+static const pseudo_double_i pdi_tau=int64fixed10_to_pdi(6283185307179586477,-18);
 
-pseudo_double pd_log(pseudo_double x) {
-	return pd_mult(pd_log2(x),pd_inv_log_2_e);
+pseudo_double_i pdi_log(pseudo_double_i x) {
+	return pdi_mult(pdi_log2(x),pdi_inv_log_2_e);
 }
 
-pseudo_double pd_log10(pseudo_double x) {
-	return pd_mult(pd_log2(x),pd_inv_log_2_10);
+pseudo_double_i pdi_log10(pseudo_double_i x) {
+	return pdi_mult(pdi_log2(x),pdi_inv_log_2_10);
 }
 
 // ./lolremez --stats --debug --long-double -d 15 -r "-1:1" "sin(x*pi/2)"
@@ -595,9 +595,9 @@ uint64_t sin_rev_64_fixed(uint64_t x) {
     return mults64hi(u,x)<<2;
 }
 
-pseudo_double pd_sin_rev(pseudo_double x) {
+pseudo_double_i pdi_sin_rev(pseudo_double_i x) {
 	if(x==0) {
-		return uint64_to_pd(0);
+		return uint64_to_pdi(0);
 	}
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
@@ -639,9 +639,9 @@ pseudo_double pd_sin_rev(pseudo_double x) {
 	return (shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65)&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+3-lead_bits;
 }
 
-pseudo_double pd_cos_rev(pseudo_double x) {
+pseudo_double_i pdi_cos_rev(pseudo_double_i x) {
 	if(x==0) {
-		return uint64_to_pd(1);
+		return uint64_to_pdi(1);
 	}
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
@@ -684,12 +684,12 @@ pseudo_double pd_cos_rev(pseudo_double x) {
 	return (shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65)&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+3-lead_bits;
 }
 
-pseudo_double pd_sin(pseudo_double x) {
-	return pd_sin_rev(pd_mult(x,pd_1_div_tau));
+pseudo_double_i pdi_sin(pseudo_double_i x) {
+	return pdi_sin_rev(pdi_mult(x,pdi_1_div_tau));
 }
 
-pseudo_double pd_cos(pseudo_double x) {
-	return pd_cos_rev(pd_mult(x,pd_1_div_tau));
+pseudo_double_i pdi_cos(pseudo_double_i x) {
+	return pdi_cos_rev(pdi_mult(x,pdi_1_div_tau));
 }
 
 // ./lolremez --stats --debug --long-double -d 35 -r "-1:1" "atan(x)*4/pi"
@@ -742,62 +742,62 @@ uint64_t atan_rev_64_fixed(uint64_t x) {
     return mults64hi(u,x)<<2;
 }
 
-pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {
+pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 	int negative=0; // boolean
 	uint64_t add_const;
 	if(y==0) {
 		if(((signed_pd_internal)x)>=0) {
-			return uint64_to_pd(0);
+			return uint64_to_pdi(0);
 		} else {
-			return int64fixed2_to_pd(1,-1); // 1/2
+			return int64fixed2_to_pdi(1,-1); // 1/2
 		}
 	} else if(((signed_pd_internal)y)>0) {
 		if(x==0) {
-			return int64fixed2_to_pd(1,-2); // 1/4
+			return int64fixed2_to_pdi(1,-2); // 1/4
 		} else if (((signed_pd_internal)x)>0) {
-			if(pd_gte(x,y)) {
+			if(pdi_gte(x,y)) {
 				// q1
 				add_const=0;
 			} else {
 				// q2
-				{ pseudo_double t=y; y=x; x=t;}
+				{ pseudo_double_i t=y; y=x; x=t;}
 				add_const=0x4000000000000000ULL;
 				negative=1; // boolean
 			}
 		} else { // x<0
-			x=pd_neg(x);
-			if(pd_gte(x,y)) {
+			x=pdi_neg(x);
+			if(pdi_gte(x,y)) {
 				// q4
 				add_const=0x8000000000000000ULL;
 				negative=1; // boolean
 			} else {
 				// q3
-				{ pseudo_double t=y; y=x; x=t;}
+				{ pseudo_double_i t=y; y=x; x=t;}
 				add_const=0x4000000000000000ULL;
 			}
 		}
 	} else { // y<0
-		y=pd_neg(y);
+		y=pdi_neg(y);
 		if(x==0) {
-			return int64fixed2_to_pd(3,-2); // 3/2
+			return int64fixed2_to_pdi(3,-2); // 3/2
 		} else if (((signed_pd_internal)x)>0) {
-			if(pd_gte(x,y)) {
+			if(pdi_gte(x,y)) {
 				// q8
 				add_const=0; // boolean
 				negative=1;
 			} else {
 				// q7
-				{ pseudo_double t=y; y=x; x=t;}
+				{ pseudo_double_i t=y; y=x; x=t;}
 				add_const=0xC000000000000000ULL;
 			}
 		} else { // x<0
-			x=pd_neg(x);
-			if(pd_gte(x,y)) {
+			x=pdi_neg(x);
+			if(pdi_gte(x,y)) {
 				// q5
 				add_const=0x8000000000000000ULL;
 			} else {
 				// q6
-				{ pseudo_double t=y; y=x; x=t;}
+				{ pseudo_double_i t=y; y=x; x=t;}
 				add_const=0xC000000000000000ULL;
 				negative=1; // boolean
 			}
@@ -809,9 +809,9 @@ pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
 	uint64_t ratio;
 	if(x==y) {
-		ratio=uint64_to_pd(1);
-	} else if(x==pd_neg(y)) {
-		ratio=int64_to_pd(-1);
+		ratio=uint64_to_pdi(1);
+	} else if(x==pdi_neg(y)) {
+		ratio=int64_to_pdi(-1);
 	} else {
 		signed_pd_internal vr=(((((signed_large_pd_internal)vy)>>2)<<64)/vx);
 		if(vr==0) {
@@ -837,16 +837,16 @@ pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+1-lead_bits;
 }
 
-pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {
-	const pseudo_double pd_tau=int64fixed10_to_pd(6283185307179586477,-18);
-	return pd_mult(pd_atan2_rev(y,x),pd_tau);
+pseudo_double_i pdi_atan2(pseudo_double_i y, pseudo_double_i x) {
+	const pseudo_double_i pdi_tau=int64fixed10_to_pdi(6283185307179586477,-18);
+	return pdi_mult(pdi_atan2_rev(y,x),pdi_tau);
 }
 
-pseudo_double pd_floor(pseudo_double x) {
+pseudo_double_i pdi_floor(pseudo_double_i x) {
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	if(e<2) {
-		return (((signed_pd_internal)x)<0)?int64_to_pd(-1):0;
+		return (((signed_pd_internal)x)<0)?int64_to_pdi(-1):0;
 	}
 	if(e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS) {
 		return x;
@@ -855,7 +855,7 @@ pseudo_double pd_floor(pseudo_double x) {
 	return (x&~m)+exponent;
 }
 
-pseudo_double pd_ceil(pseudo_double x) {
+pseudo_double_i pdi_ceil(pseudo_double_i x) {
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal mantissa=x&EXP_MASK_INV;
@@ -863,7 +863,7 @@ pseudo_double pd_ceil(pseudo_double x) {
 		if(e==1 && (mantissa<<1)==0) { // special test for ceil(-1)=-1
 			return x;
 		}
-		return (((signed_pd_internal)x)>0)?int64_to_pd(1):0;
+		return (((signed_pd_internal)x)>0)?int64_to_pdi(1):0;
 	}
 	if(e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS) {
 		return x;
@@ -881,10 +881,10 @@ pseudo_double pd_ceil(pseudo_double x) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_double)(vr+new_exponent);
+	return (pseudo_double_i)(vr+new_exponent);
 }
 
-pseudo_double pd_round(pseudo_double x) {
+pseudo_double_i pdi_round(pseudo_double_i x) {
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal mantissa=x&EXP_MASK_INV;
@@ -911,5 +911,5 @@ pseudo_double pd_round(pseudo_double x) {
 		PF_DO_ERROR_UNDERFLOW;
 	}
 #endif
-	return (pseudo_double)(vr+new_exponent);
+	return (pseudo_double_i)(vr+new_exponent);
 }
