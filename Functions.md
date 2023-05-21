@@ -223,7 +223,7 @@ The base fuctions are pd_exp2 and pd_log2, so:
 
 ## Trigonometry
 
-Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is 2$\pi$ radians.
+Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is $2\pi$ radians.
 
 The following identities are exactly true for all integer n and pseudodouble x>0:
 
