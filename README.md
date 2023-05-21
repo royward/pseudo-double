@@ -44,7 +44,7 @@ PseudoDouble is provided as a class with operator overloading and function overl
 
 ### Example code
 
-Find the roots of 0.3\*x^2-4\*x+6 using the quadratic formula.
+Find the roots of 0.3\*x^2-4\*x+6 using the quadratic formula $\frac{-b\pm\sqrt{b^2-4ac}}{2a}$
 
 #### C/C++ With doubles
 
@@ -156,6 +156,14 @@ Overflow, range and some underflow checking can be turned off by setting the mac
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.
 
 Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
+
+| Type          | Bit size | Precision (bits) | Range                                       | Consistency |
+| ------------- | -------- | ---------------- | ------------------------------------------- | ----------- |
+| float         | 32       | 53               | $\pm(1.18\times 10^-38..3.4\times 10^38)$   | no          |
+| double        | 64       | 24               | $\pm(2.23\times 10^-308..1.8\times 10^308)$ | no          |
+| fixed         | 32       | 0..31            | $\pm c(1..2.1\times 10^9)$                  | yes         |
+| fixed         | 64       | 0..63            | $\pm c(1..9.2\times 10^18)$                 | yes         |
+| pseudo-double | 64       | 47               | large                                       | yes         |
 
 	double: 32             speed  range
 	double: 64  precision  speed  range
