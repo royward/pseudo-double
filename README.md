@@ -168,7 +168,7 @@ Four properties to consider when determining how to perform calculations on cont
 
 $\ast$ precision for fixed depends on how much of the 32-bit or 64 bit word is used.
 
-$c$ is a positive constant, typically of the form $2^{-k}, k>0$
+$c$ for fixed point numbers is a positive constant, typically of the form $2^{-k}, k \ge 0$
 
 $\dagger$ these are representative values, exponent can be any value from 1..62, with corresponding changes in precision and range. 
 
