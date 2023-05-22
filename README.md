@@ -235,7 +235,7 @@ A number with b exponent bits is represented as $m 2^{e-2^{b-1}}$ where m is a s
 
 There is an overflow value represented by all 1 bits. It is is returned in cases where an overflow, infinity or error happens.
 
-* 48 bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.
+* 48 (or 56) bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.
 * a signed mantissa rather than a separate sign bit means less branching and branches are more predictable.
 * putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be does by looking at the integer values.
 * the exponent in the least significant bits means that ldexp can be done with increment/decrement (except in the case of overflow).
@@ -260,6 +260,18 @@ This then need to be normalized to give:
 This process is reversed for negating a negative power of two.
 
 The upside is that because this case only occurs with power of two or negative power of two, this case is likely to be rarer than the other cases, which will improve branch prediction.
+
+# Porting to other compilers
+
+There are two non-standard features that are gcc/g++/clang specific and might need to be adjusted for other compilers:
+
+### 128 bit signed integers
+
+gcc uses __int128. This is required for multiplication, division, pow and atan2.
+
+### Count leading zeros
+
+gcc uses __builtin_clzll. This is required for all functions. For x86-64 the 
 
 # Other notes
 
