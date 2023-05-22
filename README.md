@@ -32,7 +32,9 @@ For most uses, the easiest option is to include the source files directly in you
 
 ## C
 
-pseudo_double is aliased to uint64_t
+pseudo_double is a struct to prevent accidental use of integer operations.
+
+To avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there are functions pdi\_\*() and \*\_pdi() that match the pd\_\*() and \*\_pd() functions. Use at your own risk.
 
 ### Files
 
