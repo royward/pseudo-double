@@ -267,11 +267,11 @@ There are two non-standard features that are gcc/g++/clang specific and might ne
 
 ### 128 bit signed integers
 
-gcc uses __int128. This is required for multiplication, division, pow and atan2.
+gcc/g++/clang uses __int128. This is required for multiplication, division, pow and atan2.
 
 ### Count leading zeros
 
-gcc uses __builtin_clzll. This is required for all functions. For x86-64 the intel intrinsic _lzcnt_u64 is available. 
+gcc/g++/clang uses __builtin_clzll. This is required for all functions. For x86-64 the intel intrinsic _lzcnt_u64 is available. 
 
 # Other notes
 
