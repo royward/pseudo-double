@@ -10,7 +10,19 @@ https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-pro
 
 There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-double library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point.
 
-This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang. 
+This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang.
+
+It also allows the number of expononent bits to be set with a macro, which enables choices to be made in the range/precision tradeoff.
+
+# Use cases
+
+The main use cases for this code are:
+
+* Something where cross-platform consistency is important and there is too much dynamic range required to use fixed point.
+
+* Applications where a range/precision tradeoff different than the IEEE 754 one is useful setting (see PSEUDO_DOUBLE_EXP_BITS below)
+
+* This may be adaptable with some rework to hardware that doesn't support floating point but double precision is still desired.
 
 # Usage
 
@@ -149,6 +161,22 @@ C++ default: throw std::range_error("range")
 
 NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so if it is used, it should be checked for explicitly after any calculation that might generate that value.
 
+# Other settings
+
+## PSEUDO_DOUBLE_EXP_BITS
+
+This sets the number of bits in the exponent, defaulting to 16 if not set.
+
+If the number of the exponent bits is $n$:
+
+* The mantissa will have $64-n$ fits for a precision of $63-n$.
+
+* Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ and $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$
+
+Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other values, as the CPU can take advantage of the internal integer sizes rather than having to do shifts.
+
+## PF_ERROR_CHECK
+
 Overflow, range and some underflow checking can be turned off by setting the macro PF_ERROR_CHECK to 0 (default is 1). This may give a very slight preformance increase, but at the cost of returning undetectable garbage instread of and error. It is not worth turning errors off unless you are certain that overflow/range/underflow errors will not occur. This will also cause some "may be used uninitialized in this function" errors on compilation.
 
 # Design Considerations
@@ -163,7 +191,7 @@ Four properties to consider when determining how to perform calculations on cont
 | double        | 64          | 11              | 24               | $\pm(2.23\times 10^{-308} \ldots 1.8\times 10^{308})$    | 1    | no          |
 | fixed         | 32          | 0               | 0 ... 31 $\ast$  | $\pm c(1 \ldots 2.1\times 10^{9})$                       | 1    | yes         |
 | fixed         | 64          | 0               | 0 ... 63 $\ast$  | $\pm c(1 \ldots 9.2\times 10^{18})$                      | 1    | yes         |
-| pseudo-double | 64          | 16 $\dagger$    | 47               | $\pm(2.10\times 10^{-4933} \ldots 2.97\times 10^{4931})$ | 1    | yes         |
+| pseudo-double | 64          | 16 $\dagger$    | 47               | $\pm(2.10\times 10^{-4933} \ldots 2.97\times 10^{4931})$ | ~10  | yes         |
 | pseudo-double | 64          | 8 $\dagger$     | 55               | $\pm(7.35\times 10^{-40} \ldots 8.51\times 10^{37})$     | ~10  | yes         |
 
 $\ast$ precision for fixed depends on how much of the 32-bit or 64 bit word is used.
@@ -186,14 +214,23 @@ For reference, an IEEE 754 double has a sign bit, 11 bits of exponent, and a 52 
 
 0 is represented by all zeros, -0 is represented by a 1 sign bit, the rest zero.
 
-Pseudo doubles have a 48 bit signed mantissa (no bits removed), and a 16 bit exponent:
+Pseudo doubles have a 48 bit signed mantissa (no bits removed), and a settable (default 16 bit) exponent:
 
 	mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmeeeeeeeeeeeeeeee
 	6666555555555544444444443333333333222222222211111111110000000000
 	3210987654321098765432109876543210987654321098765432109876543210
 
-A number is represented as m*2^(e-16384) where m is a signed fixed point, -0.5<=m<0.5
+Here is the layout with an 8 bit exponent:
+
+	mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmeeeeeeee
+	6666555555555544444444443333333333222222222211111111110000000000
+	3210987654321098765432109876543210987654321098765432109876543210
+
+
+A number with b exponent bits is represented as $m 2^{e-2^{b-1}}$ where m is a signed fixed point, $-0.5 \le m < 0.5$
+
 0 is represented by all zeros, there is no -0.
+
 There is an overflow value represented by all 1 bits. It is is returned in cases where an overflow, infinity or error happens.
 
 * 48 bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.

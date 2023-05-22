@@ -45,9 +45,7 @@
 // [.1000 .. .1011] = [-0.5 .. -0.25)
 // [.0100 .. .0111] = [0.25 .. 0.5)
 
-#ifndef PSEUDO_DOUBLE_TOTAL_BITS
 #define PSEUDO_DOUBLE_TOTAL_BITS 64
-#endif
 
 #ifndef PSEUDO_DOUBLE_EXP_BITS
 // Recommend 8,16 or 32 for this. Other values will work but be less efficient
@@ -56,6 +54,7 @@
 
 #define EXP_MASK ((1LL<<PSEUDO_DOUBLE_EXP_BITS)-1)
 #define EXP_MASK_INV (~((1ULL<<PSEUDO_DOUBLE_EXP_BITS)-1))
+// leaving this conditional in in case we finish the 32 bit case. Currently only works with 64 bits
 #if PSEUDO_DOUBLE_TOTAL_BITS==64
 typedef uint64_t pseudo_double_i;
 typedef uint64_t unsigned_pd_internal;
