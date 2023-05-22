@@ -271,7 +271,7 @@ gcc uses __int128. This is required for multiplication, division, pow and atan2.
 
 ### Count leading zeros
 
-gcc uses __builtin_clzll. This is required for all functions. For x86-64 the 
+gcc uses __builtin_clzll. This is required for all functions. For x86-64 the intel intrinsic _lzcnt_u64 is available. 
 
 # Other notes
 
