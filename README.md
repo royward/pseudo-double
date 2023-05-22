@@ -32,9 +32,9 @@ For most uses, the easiest option is to include the source files directly in you
 
 ## C
 
-pseudo_double is a struct to prevent accidental use of integer operations.
+pseudo_double is a struct to provide type safety.
 
-To avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there are functions pdi\_\*() and \*\_pdi() that match the pd\_\*() and \*\_pd() functions. Use at your own risk.
+If you avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there are functions pdi\_\*() and \*\_pdi() that match the pd\_\*() and \*\_pd() functions. Use at your own risk.
 
 ### Files
 
@@ -44,7 +44,7 @@ To avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there
 
 ## C++
 
-PseudoDouble is provided as a class with operator overloading and function overloading are used to provide the same syntax as the standard floating point operations.
+PseudoDouble is provided as a class with operator overloading and function overloading to provide the same syntax as the standard floating point operations.
 
 ### Files
 
