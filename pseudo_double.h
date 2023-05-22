@@ -36,10 +36,10 @@
 //#define PSEUDO_DOUBLE_EXP_BITS 16
 // This will default to 2^(PSEUDO_DOUBLE_EXP_BITS-1)
 //#define PSEUDO_DOUBLE_EXP_BIAS 32768
-// This will default to return PF_NAN
-//#define PF_DO_ERROR_OVERFLOW return PF_NAN
-//#define PF_DO_ERROR_UNDERFLOW return 0
-//#define PF_DO_ERROR_RANGE return PF_NAN
+// This will default to return PD_NAN
+//#define PD_DO_ERROR_OVERFLOW return PD_NAN
+//#define PD_DO_ERROR_UNDERFLOW return 0
+//#define PD_DO_ERROR_RANGE return PD_NAN
 
 // Mantissa
 // [.1000 .. .1011] = [-0.5 .. -0.25)
@@ -74,21 +74,21 @@ typedef int64_t signed_large_pd_internal;
 #define PSEUDO_DOUBLE_EXP_BIAS (1U<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #endif
 #define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
-#define PF_NAN ((pseudo_double_i)(-1))
+#define PD_NAN ((pseudo_double_i)(-1))
 
-#ifndef PF_ERROR_CHECK
+#ifndef PD_ERROR_CHECK
 // Setting this to 0 will turn off most overflow/underflow/range checking and result in a tiny speed increase
 // Probably not worth it in most scenarios
-#define PF_ERROR_CHECK 1
+#define PD_ERROR_CHECK 1
 #endif
-#ifndef PF_DO_ERROR_OVERFLOW
-#define PF_DO_ERROR_OVERFLOW return PF_NAN
+#ifndef PD_DO_ERROR_OVERFLOW
+#define PD_DO_ERROR_OVERFLOW return PD_NAN
 #endif
-#ifndef PF_DO_ERROR_UNDERFLOW
-#define PF_DO_ERROR_UNDERFLOW return 0
+#ifndef PD_DO_ERROR_UNDERFLOW
+#define PD_DO_ERROR_UNDERFLOW return 0
 #endif
-#ifndef PF_DO_ERROR_RANGE
-#define PF_DO_ERROR_RANGE return PF_NAN
+#ifndef PD_DO_ERROR_RANGE
+#define PD_DO_ERROR_RANGE return PD_NAN
 #endif
 
 inline signed_pd_internal shift_left_signed(signed_pd_internal x, int shift) {
@@ -116,17 +116,17 @@ inline pseudo_double_i pdi_neg(pseudo_double_i x) {
 		// get the high order byte
 		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 			if(exponent==EXP_MASK) {
-				PF_DO_ERROR_OVERFLOW;
+				PD_DO_ERROR_OVERFLOW;
 			}
 #endif
 			return (mantissa>>1)+exponent+1;
 		}
 		if(hi_byte==0x40) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 			if(exponent==0) {
-				PF_DO_ERROR_UNDERFLOW;
+				PD_DO_ERROR_UNDERFLOW;
 			}
 #endif
 			return (mantissa<<1)+exponent-1;
@@ -145,9 +145,9 @@ inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 		// get the high order byte
 		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
 		if(hi_byte==0x80) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 			if(exponent==EXP_MASK) {
-				PF_DO_ERROR_OVERFLOW;
+				PD_DO_ERROR_OVERFLOW;
 			}
 #endif
 			return (mantissa>>1)+exponent+1;
@@ -216,12 +216,12 @@ inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
 	}
 	vr<<=leading_bits;
 	int32_t new_exponent=exp_max-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)((vr&EXP_MASK_INV)+new_exponent);
@@ -259,12 +259,12 @@ inline pseudo_double_i pdi_add(pseudo_double_i x, pseudo_double_i y) {
 	}
 	vr<<=leading_bits;
 	int32_t new_exponent=exp_max-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)((vr&EXP_MASK_INV)+new_exponent);
@@ -283,12 +283,12 @@ inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=expx+expy-PSEUDO_DOUBLE_EXP_BIAS-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)((vr&EXP_MASK_INV)+new_exponent);
@@ -300,7 +300,7 @@ inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
 	if(vy==0) { // leave this one in to avoid division bby zero signal
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 	signed_pd_internal vr=(((((signed_large_pd_internal)vx)>>2)<<64)/vy);
 	if(vr==0) {
@@ -310,25 +310,25 @@ inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=2+expx-expy+PSEUDO_DOUBLE_EXP_BIAS-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)((vr&EXP_MASK_INV)+new_exponent);
 }
 
 inline pseudo_double_i pdi_ldexp(pseudo_double_i x, int y) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	int32_t expx=x&EXP_MASK;
 	if(expx+y>(int32_t)EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(expx+y<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return x+y;

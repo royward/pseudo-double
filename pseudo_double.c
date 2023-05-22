@@ -51,20 +51,20 @@ pseudo_double_i double_to_pdi(double d) {
 			if(exponent<1) {
 				return 0;
 			}
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 			if(exponent>(signed_pd_internal)(EXP_MASK+1)) {
-				PF_DO_ERROR_OVERFLOW;
+				PD_DO_ERROR_OVERFLOW;
 			}
 #endif
 			return (1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-1))+exponent-1;
 		}
 	}
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(exponent<0) {
 		return 0;
 	}
 	if(exponent>(signed_pd_internal)EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 #endif
 	mantissa=shift_left_signed(mantissa,PSEUDO_DOUBLE_TOTAL_BITS-54);
@@ -143,9 +143,9 @@ int64_t pdi_to_int64(pseudo_double_i x) {
 	}
 	signed_pd_internal vx=((signed_pd_internal)x)&EXP_MASK_INV;
 	int32_t exponent=(x&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
 		return 0;
@@ -161,12 +161,12 @@ int64_t pdi_to_int64fixed2(pseudo_double_i x, int32_t e) {
 	}
 	signed_pd_internal vx=((signed_pd_internal)x)&EXP_MASK_INV;
 	int32_t exponent=(x&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS-e;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	int64_t ret=vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
@@ -175,7 +175,7 @@ int64_t pdi_to_int64fixed2(pseudo_double_i x, int32_t e) {
 
 uint64_t pdi_to_uint64(pseudo_double_i x) {
 	if(((signed_pd_internal)x)<0) {
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 	if(x==0) {
 		return 0;
@@ -185,12 +185,12 @@ uint64_t pdi_to_uint64(pseudo_double_i x) {
 	if(exponent==PSEUDO_DOUBLE_TOTAL_BITS+1) {
 		return vx<<1;
 	}
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	uint64_t ret=vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
@@ -249,9 +249,9 @@ uint32_t inv_sqrt32_internal(uint32_t x) {
 ****************************************************************************************************/
 
 pseudo_double_i pdi_inv_sqrt(pseudo_double_i x) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 #endif
 	int32_t exponent=x&EXP_MASK;
@@ -269,9 +269,9 @@ pseudo_double_i pdi_inv_sqrt(pseudo_double_i x) {
 }
 
 pseudo_double_i pdi_sqrt(pseudo_double_i x) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(((signed_pd_internal)x)<0) {
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 #endif
 	if(x==0) {
@@ -383,9 +383,9 @@ uint64_t log2_64_fixed(uint64_t x) {
 
 // x^y = e^ln(x)^y = e^(y*ln(x))
 pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 #endif
 	int64_t exponent=(x&EXP_MASK);
@@ -446,20 +446,20 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		new_exponent=((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er);
 		fraction=((signed_pd_internal)(vr&m))<<er;
 	} else {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 		if(vr<0) {
-			PF_DO_ERROR_UNDERFLOW;
+			PD_DO_ERROR_UNDERFLOW;
 		} else {
-			PF_DO_ERROR_OVERFLOW;
+			PD_DO_ERROR_OVERFLOW;
 		}
 #endif
 	}
 	int32_t newe=new_exponent+PSEUDO_DOUBLE_EXP_BIAS+2;
 	if(newe<0) { // common to have underflow, so leave this in
-		PF_DO_ERROR_UNDERFLOW;
-#if PF_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#if PD_ERROR_CHECK
 	} else if(newe>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 #endif
 	}
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
@@ -468,9 +468,9 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 }
 
 pseudo_double_i pdi_log2(pseudo_double_i x) {
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(((signed_pd_internal)x)<=0) {
-		PF_DO_ERROR_RANGE;
+		PD_DO_ERROR_RANGE;
 	}
 #endif
 	int64_t exponent=(x&EXP_MASK);
@@ -528,19 +528,19 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 	} else {
 		// common to have underflow, so leave this in
 		if(((signed_pd_internal)x)<0) {
-			PF_DO_ERROR_UNDERFLOW;
-#if PF_ERROR_CHECK
+			PD_DO_ERROR_UNDERFLOW;
+#if PD_ERROR_CHECK
 		} else {
-			PF_DO_ERROR_OVERFLOW;
+			PD_DO_ERROR_OVERFLOW;
 #endif
 		}
 	}
 	int32_t newe=new_exponent+PSEUDO_DOUBLE_EXP_BIAS+2;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(newe<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	} else if(newe>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 #endif
 	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
@@ -873,12 +873,12 @@ pseudo_double_i pdi_ceil(pseudo_double_i x) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)(vr+new_exponent);
@@ -903,12 +903,12 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
-#if PF_ERROR_CHECK
+#if PD_ERROR_CHECK
 	if(new_exponent>EXP_MASK) {
-		PF_DO_ERROR_OVERFLOW;
+		PD_DO_ERROR_OVERFLOW;
 	}
 	if(new_exponent<0) {
-		PF_DO_ERROR_UNDERFLOW;
+		PD_DO_ERROR_UNDERFLOW;
 	}
 #endif
 	return (pseudo_double_i)(vr+new_exponent);

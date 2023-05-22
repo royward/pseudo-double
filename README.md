@@ -143,23 +143,23 @@ See Functions.md for details of all the provided functions.
 
 # Overflows
 
-There is an error value (PF_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
+There is an error value (PD_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
 
 There are three macros that can be set to determine the behaviour in these cases:
 
-PF_DO_ERROR_OVERFLOW  
-C default: return PF_NAN  
+PD_DO_ERROR_OVERFLOW  
+C default: return PD_NAN  
 C++ default: throw std::overflow_error("overflow")
 
-PF_DO_ERROR_UNDERFLOW  
+PD_DO_ERROR_UNDERFLOW  
 C default: return 0  
 C++ default: return PseudoDouble(0)
 
-PF_DO_ERROR_RANGE  
-C default: return PF_NAN  
+PD_DO_ERROR_RANGE  
+C default: return PD_NAN  
 C++ default: throw std::range_error("range")
 
-NOTE: in the interests of performance, PF_NAN is _not_ checked for on input, so if it is used, it should be checked for explicitly after any calculation that might generate that value.
+NOTE: in the interests of performance, PD_NAN is _not_ checked for on input, so if it is used, it should be checked for explicitly after any calculation that might generate that value.
 
 # Other settings
 
@@ -171,13 +171,13 @@ If the number of the exponent bits is $n$:
 
 * The mantissa will have $64-n$ fits for a precision of $63-n$.
 
-* Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ and $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$
+* Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ or $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$
 
 Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other values, as the CPU can take advantage of the internal integer sizes rather than having to do shifts.
 
-## PF_ERROR_CHECK
+## PD_ERROR_CHECK
 
-Overflow, range and some underflow checking can be turned off by setting the macro PF_ERROR_CHECK to 0 (default is 1). This may give a very slight preformance increase, but at the cost of returning undetectable garbage instread of and error. It is not worth turning errors off unless you are certain that overflow/range/underflow errors will not occur. This will also cause some "may be used uninitialized in this function" errors on compilation.
+Overflow, range and some underflow checking can be turned off by setting the macro PD_ERROR_CHECK to 0 (default is 1). This may give a very slight preformance increase, but at the cost of returning undetectable garbage instread of and error. It is not worth turning errors off unless you are certain that overflow/range/underflow errors will not occur. This will also cause some "may be used uninitialized in this function" errors on compilation.
 
 # Design Considerations
 
@@ -239,7 +239,7 @@ There is an overflow value represented by all 1 bits. It is is returned in cases
 * the exponent in the least significant bits means that ldexp can be done with increment/decrement (except in the case of overflow).
 * pseudo doubles don't use denormalized representations - it's a lot of extra checking (cheap in hardware, expensive in software) for only a small increase in dynamic range. Unless set up to return some sort of error, underflows go straight to zero.
 
-Except for zero and PF_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
+Except for zero and PD_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
 
 There is an asymmetry that needs to be considered caused by -0.5<=m<5. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
 
