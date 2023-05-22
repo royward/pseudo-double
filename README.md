@@ -56,11 +56,11 @@ PseudoDouble is provided as a class with operator overloading and function overl
 
 **PseudoDouble_speed_test.cpp**: a simple speed test. 10x10 matrix inversion plus some short loop tests.
 
-### Example code
+## Example code
 
 Find the roots of $0.3x^2-4x+6$ using the quadratic formula $\frac{-b\pm\sqrt{b^2-4ac}}{2a}$
 
-#### C/C++ With doubles
+### C/C++ With doubles
 
 This is some code with doubles as it might normally be done.
 
@@ -73,7 +73,7 @@ This is some code with doubles as it might normally be done.
 	printf("C: Solution 1 = %lf\n",sol1);
 	printf("C: Solution 2 = %lf\n",sol2);
 
-#### C with pseudo_double
+### C with pseudo_double
 
 	pseudo_double a=int64fixed10_to_pd(3,-1); // 0.3
 	pseudo_double b=int64_to_pd(-4);
@@ -90,7 +90,7 @@ Note that we have to be careful constructing the a=0.3 The code:
 
 would also worth, but that is not dependent on hardware floating point, and may not be guaranteed to give the same result cross platform.
 
-#### C++ with PseudoDouble
+### C++ with PseudoDouble
 
 Here we get to make good use of operator and function overloading.
 
@@ -103,7 +103,7 @@ Here we get to make good use of operator and function overloading.
 	std::cout << "C++: Solution 1 = " << sol1 << std::endl;
 	std::cout << "C++: Solution 2 = " << sol2 << std::endl;
 
-#### C with pseudo_double_i (type unsafe)
+### C with pseudo_double_i (type unsafe)
 
 Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage.
 
@@ -116,7 +116,7 @@ Here we don't use the pseudo_double struct but use the pseudo_double_i instead. 
 	printf("C (unsafe): Solution 1 = %lf\n",pdi_to_double(sol1));
 	printf("C (unsafe): Solution 2 = %lf\n",pdi_to_double(sol2));
 
-### Running the tests
+## Running the tests
 
 To built the library test:
 
