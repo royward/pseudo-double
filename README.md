@@ -168,9 +168,9 @@ Four properties to consider when determining how to perform calculations on cont
 
 $\ast$ precision for fixed depends on how much of the 32-bit or 64 bit word is used.
 
-$c$ is a positive constant, typically of the form $2^-k, k>0$
+$c$ is a positive constant, typically of the form $2^{-k}, k>0$
 
-$\dagger$ representative values, exponent can be any value from 1..62, with corresponding changes in precision and range. 
+$\dagger$ these are representative values, exponent can be any value from 1..62, with corresponding changes in precision and range. 
 
 Pseudo Doubles are intended to give precision, range and consistency while sacrificing as little speed as possible, although they will never be as fast as float, double or fixed.
 
