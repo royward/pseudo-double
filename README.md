@@ -20,9 +20,9 @@ The main use cases for this code are:
 
 * Something where cross-platform consistency is important and there is too much dynamic range required to use fixed point.
 
-* Applications where a range/precision tradeoff different than the IEEE 754 one is useful setting (see PSEUDO_DOUBLE_EXP_BITS below)
+* Applications where a range/precision tradeoff different than the IEEE 754 one is useful setting (see PSEUDO_DOUBLE_EXP_BITS below).
 
-* This may be adaptable with some rework to hardware that doesn't support floating point but double precision is still desired.
+* This may be adaptable to hardware that doesn't support floating point but double precision or the speedup of not requiring IEEE 754 is still desired. The would likely require considerable rework, as a processor that doesn't already support floating point is unlikely to support things like 128 bit integers.
 
 # Usage
 
@@ -32,9 +32,9 @@ For most uses, the easiest option is to include the source files directly in you
 
 ## C
 
-pseudo_double is a struct to provide type safety.
+pseudo_double is a struct containing a single number to provide type safety.
 
-If you avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there are functions pdi\_\*() and \*\_pdi() that match the pd\_\*() and \*\_pd() functions. Use at your own risk.
+If you want to avoid use of the struct, pseudo_double_i aliased to uint64_t, and there there are functions pdi\_\*() and \*\_pdi() that match the pd\_\*() and \*\_pd() functions. Use at your own risk.
 
 ### Files
 
@@ -50,7 +50,9 @@ PseudoDouble is provided as a class with operator overloading and function overl
 
 **PseudoDouble.h**: file to include to access the C++ functionality
 
-**pseudo_double.cpp**: is just a C++ wrapper for pseudo_double.c
+**pseudo_double.cpp**: is just a C++ wrapper for pseudo_double.c, or pseudo_double.c can be used directly.
+
+**pseudo_double.h**: is included by PseudoDouble.h.
 
 **PseudoDouble_test.cpp**: a test for the rest of the library.
 
@@ -88,7 +90,7 @@ Note that we have to be careful constructing the a=0.3 The code:
 
 	pseudo_double a=double_to_pd(0.3);
 
-would also worth, but that is not dependent on hardware floating point, and may not be guaranteed to give the same result cross platform.
+would also work, but that is dependent on hardware floating point and may not be guaranteed to give the same result cross platform.
 
 ### C++ with PseudoDouble
 
@@ -105,7 +107,7 @@ Here we get to make good use of operator and function overloading.
 
 ### C with pseudo_double_i (type unsafe)
 
-Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage.
+Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage. Not recommended.
 
 	pseudo_double_i a=int64fixed10_to_pdi(3,-1); // 0.3
 	pseudo_double_i b=int64_to_pdi(-4);
@@ -125,7 +127,7 @@ To built the library test:
 When the generated executable is run, it will print out a line for any failed tests, followed by a count of tests passed/done:
 
 	./pseudo_double_test 
-	Tests done, passed 3863863/3863863
+	Tests done, passed 3832004/3832004
 
 Similarly, the speed tests can be built using:
 
@@ -229,7 +231,7 @@ Here is the layout with an 8 bit exponent:
 	3210987654321098765432109876543210987654321098765432109876543210
 
 
-A number with b exponent bits is represented as $m 2^{e-2^{b-1}}$ where m is a signed fixed point, $-0.5 \le m < 0.5$
+A number with b exponent bits is represented as $m 2^{e-2^{b-1}}$ where m is a signed fixed point, $-0.5 \le m < 0.5$ . For instance, with a 16 bit exponent, a number is represented by $m 2^{e-32768}$ .
 
 0 is represented by all zeros, there is no -0.
 
@@ -243,7 +245,7 @@ There is an overflow value represented by all 1 bits. It is is returned in cases
 
 Except for zero and PD_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
 
-There is an asymmetry that needs to be considered caused by -0.5<=m<5. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
+There is an asymmetry that needs to be considered caused by $-0.5 \le m < 5$. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
 
 A power of two is represented by:
 
@@ -279,5 +281,3 @@ The constants used for generating transcendental functions were generated using 
 * scaled integers are used rather than floating point
 * in some cases the calculation has various scale changes applied to best use as much of the range of 64 bit integers as possible without overflowing
 * small adjustments are made in the last step to try and ensure the overall function is as smooth as possible at the boundaries, possibly at the expense of some accuracy.
-
-
