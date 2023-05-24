@@ -175,7 +175,7 @@ If the number of the exponent bits is $n$:
 
 * The mantissa will have $64-n$ fits for a precision of $63-n$.
 
-* Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ or $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$
+* Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ or $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$ If $n=16$ that would be $-2^{32766} \le x < -2^{-32770}$ or $2^{-32770} \le x < 2^{32766}$
 
 Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other values, as the CPU can take advantage of the internal integer sizes rather than having to do shifts.
 
