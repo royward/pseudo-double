@@ -183,6 +183,38 @@ Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other
 
 Overflow, range and some underflow checking can be turned off by setting the macro PD_ERROR_CHECK to 0 (default is 1). This may give a very slight preformance increase, but at the cost of returning undetectable garbage instread of and error. It is not worth turning errors off unless you are certain that overflow/range/underflow errors will not occur. This will also cause some "may be used uninitialized in this function" errors on compilation.
 
+# Extra: Trigonometry using revolutions
+
+For geometry, specifically for game design, radians are not necessarily the best unit. Several functions have been provided that use revolutions instead. A revolution is $2\pi$ radians.
+
+This will result in some exact solutions that would not be the case if values have to be converted to and from radians.
+
+There are more details in Functions.md .
+
+### C
+
+	pseudo_double pd_sin_rev(pseudo_double x);
+	pseudo_double pd_cos_rev(pseudo_double x);
+	pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x);
+
+### C++
+
+	PseudoDouble sin_rev(const PseudoDouble x);
+	PseudoDouble cos_rev(const PseudoDouble x);
+	PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x);
+
+# Extra: Fixed integer helper functions
+
+Some fixed integer functions used by this library have been exposed as they may be useful elsewhere.
+
+They are documented in the last section of Functions.md and do not depend on any other features of pseudo-double. They give about 48 bits of accuracy.
+
+	uint64_t inv_sqrt64_fixed(uint64_t x);
+	uint64_t exp2_64_fixed(uint64_t x);
+	uint64_t log2_64_fixed(uint64_t x);
+	uint64_t sin_rev_64_fixed(uint64_t x);
+	uint64_t atan_rev_64_fixed(uint64_t x);
+
 # Design Considerations
 
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.

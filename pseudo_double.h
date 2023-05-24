@@ -465,12 +465,11 @@ inline pseudo_double pd_log2(pseudo_double x) {return create_pseudo_double_from_
 inline pseudo_double pd_log(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log(x.val));}
 inline pseudo_double pd_log10(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log10(x.val));}
 inline pseudo_double pd_pow(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_pow(x.val,y.val));}
-inline pseudo_double pd_sin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_neg(x.val));}
+inline pseudo_double pd_sin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin_rev(x.val));}
 inline pseudo_double pd_cos_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos_rev(x.val));}
 inline pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2_rev(x.val,y.val));}
 inline pseudo_double pd_sin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin(x.val));}
 inline pseudo_double pd_cos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos(x.val));}
 inline pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2(x.val,y.val));}
-inline void debug_pd_output(pseudo_double d) {debug_pdi_output(d.val);}
 
 #endif // PSEUDO_DOUBLE_H
