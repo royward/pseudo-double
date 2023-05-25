@@ -552,16 +552,24 @@ pseudo_double_i pdi_exp(pseudo_double_i x) {
 	return pdi_exp2(pdi_mult(x,log_2_e));
 }
 
+#if __GNUG__
 static const pseudo_double_i pdi_inv_log_2_e =int64fixed10_to_pdi(6931471805599453094,-19);
 static const pseudo_double_i pdi_inv_log_2_10=int64fixed10_to_pdi(3010299956639811952,-19);
 static const pseudo_double_i pdi_1_div_tau=pdi_div(uint64_to_pdi(1),int64fixed10_to_pdi(6283185307179586477,-18));
 static const pseudo_double_i pdi_tau=int64fixed10_to_pdi(6283185307179586477,-18);
+#endif
 
 pseudo_double_i pdi_log(pseudo_double_i x) {
+#if !__GNUG__
+	const pseudo_double_i pdi_inv_log_2_e =int64fixed10_to_pdi(6931471805599453094,-19);
+#endif
 	return pdi_mult(pdi_log2(x),pdi_inv_log_2_e);
 }
 
 pseudo_double_i pdi_log10(pseudo_double_i x) {
+#if !__GNUG__
+	const pseudo_double_i pdi_inv_log_2_10=int64fixed10_to_pdi(3010299956639811952,-19);
+#endif
 	return pdi_mult(pdi_log2(x),pdi_inv_log_2_10);
 }
 
@@ -685,10 +693,12 @@ pseudo_double_i pdi_cos_rev(pseudo_double_i x) {
 }
 
 pseudo_double_i pdi_sin(pseudo_double_i x) {
+	const pseudo_double_i pdi_1_div_tau=pdi_div(uint64_to_pdi(1),int64fixed10_to_pdi(6283185307179586477,-18));
 	return pdi_sin_rev(pdi_mult(x,pdi_1_div_tau));
 }
 
 pseudo_double_i pdi_cos(pseudo_double_i x) {
+	const pseudo_double_i pdi_1_div_tau=pdi_div(uint64_to_pdi(1),int64fixed10_to_pdi(6283185307179586477,-18));
 	return pdi_cos_rev(pdi_mult(x,pdi_1_div_tau));
 }
 

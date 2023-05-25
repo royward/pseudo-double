@@ -426,9 +426,9 @@ void debug_pdi_output(pseudo_double_i d);
  * =========================================================================================================================================================================
  */
 
-struct pseudo_double {
+typedef struct {
 	pseudo_double_i val;
-};
+} pseudo_double;
 
 inline pseudo_double create_pseudo_double_from_internal(pseudo_double_i x) {
 	pseudo_double ret;
