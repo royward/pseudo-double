@@ -1,5 +1,9 @@
 # Change Log
 
+# 1.0.2 - 2023-05-24
+
+* Fixed some C++isms that crept into the C code
+
 # 1.0.1 - 2023-05-20
 
 * Changed **pseudo_double** from a typedef to a struct to assist with tyoe safety.
