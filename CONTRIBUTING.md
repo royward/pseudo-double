@@ -16,7 +16,7 @@ Many of the transcendental functions are not as accurate as they could be. If yo
 
 ### Can you speed up a function?
 
-I really wany to hear about that! File a pull request with your improvements.
+I really want to hear about that! File a pull request with your improvements.
 
 ### Have you seen an improvement that could be made to the docs?
 
