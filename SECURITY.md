@@ -2,7 +2,7 @@
 
 Please don't use this code anywhere mission critical - it has not been tested anywhere near sufficiently for that.
 
-This code does no memmory allocation and makes no system calls, so there are no security implications.
+This code does no heap allocation, uses no pointers and makes no system calls, so there are no security implications.
 
 ## Supported Versions
 
