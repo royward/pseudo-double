@@ -29,7 +29,6 @@
 
 #include "pseudo_double.h"
 #include <math.h>
-#include <stdio.h>
 
 pseudo_double_i double_to_pdi(double d) {
 	union {

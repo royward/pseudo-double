@@ -29,6 +29,7 @@
 
 #ifndef PSEUDO_DOUBLE_H
 #define PSEUDO_DOUBLE_H
+
 #include <stdint.h>
 
 // Can set any of these or just use the defaults
