@@ -271,13 +271,13 @@ There is an overflow value represented by all 1 bits. It is is returned in cases
 
 * 48 (or 56) bits of mantissa rather than 52 bits means everything is on 8 bit boundaries, which is a slight performance improvement.
 * a signed mantissa rather than a separate sign bit means less branching and branches are more predictable.
-* putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be does by looking at the integer values.
+* putting the mantissa in the most significant bits means that comparison with less than, greater than, or equal to zero can be done by looking at the integer values.
 * the exponent in the least significant bits means that ldexp can be done with increment/decrement (except in the case of overflow).
 * pseudo doubles don't use denormalized representations - it's a lot of extra checking (cheap in hardware, expensive in software) for only a small increase in dynamic range. Unless set up to return some sort of error, underflows go straight to zero.
 
 Except for zero and PD_NAN, the most significant bits of the mantissa after normalization are always different (01 or 10). Technically this redundancy could be removed to give one extra bit of precision, but that would result in more complex computation.
 
-There is an asymmetry that needs to be considered caused by $-0.5 \le m < 5$. Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
+There is an asymmetry that needs to be considered caused by $-0.5 \le m$ (non-strict inequality) and $m < 5$ (strict inequality). Most numbers can be negated by just leaving the exponent the same and integer negating the mantissa. The exception is when the number represents a power of two or negative power of two:
 
 A power of two is represented by:
 
