@@ -54,11 +54,11 @@ public:
 	inline PseudoDouble(uint32_t f) {val=uint64_to_pdi(f);}
 	inline PseudoDouble(uint64_t f) {val=uint64_to_pdi(f);}
 	inline operator double() const {return pdi_to_double(val);}
-	inline operator int16_t() const {return pdi_to_int64(val);}
-	inline operator int32_t() const {return pdi_to_int64(val);}
+	inline operator int16_t() const {return static_cast<int16_t>(pdi_to_int64(val));}
+	inline operator int32_t() const {return static_cast<int32_t>(pdi_to_int64(val));}
 	inline operator int64_t() const {return pdi_to_int64(val);}
-	inline operator uint16_t() const {return pdi_to_uint64(val);}
-	inline operator uint32_t() const {return pdi_to_uint64(val);}
+	inline operator uint16_t() const {return static_cast<uint16_t>(pdi_to_uint64(val));}
+	inline operator uint32_t() const {return static_cast<uint32_t>(pdi_to_uint64(val));}
 	inline operator uint64_t() const {return pdi_to_uint64(val);}
 	inline PseudoDouble operator-() const {return PseudoDouble::create(pdi_neg(val));}
 	inline PseudoDouble operator+(const PseudoDouble x) const {return PseudoDouble::create(pdi_add(val,x.val));}

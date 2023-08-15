@@ -32,6 +32,11 @@
 
 #include <stdint.h>
 
+#ifdef _MSC_VER
+#include <boost/multiprecision/cpp_int.hpp>
+#include <intrin.h>
+#endif
+
 // Can set any of these or just use the defaults
 //#define PSEUDO_DOUBLE_TOTAL_BITS 64
 //#define PSEUDO_DOUBLE_EXP_BITS 16
@@ -60,8 +65,15 @@
 typedef uint64_t pseudo_double_i;
 typedef uint64_t unsigned_pd_internal;
 typedef int64_t signed_pd_internal;
-typedef __int128 signed_large_pd_internal;
+#ifdef _MSC_VER // windows
+typedef boost::multiprecision::int128_t signed_large_pd_internal;
+typedef boost::multiprecision::uint128_t unsigned_large_pd_internal;
+#define clz (uint32_t)__lzcnt64
+#else // gcc/clang
+typedef __int128 unsigned_large_pd_internal;
+typedef unsigned __int128 unsigned_large_pd_internal;
 #define clz __builtin_clzll
+#endif
 #elif PSEUDO_DOUBLE_TOTAL_BITS==32
 typedef uint32_t pseudo_double_i;
 typedef uint32_t unsigned_pd_internal;
@@ -133,7 +145,7 @@ inline pseudo_double_i pdi_neg(pseudo_double_i x) {
 			return (mantissa<<1)+exponent-1;
 		}
 	}
-	return (-(x&EXP_MASK_INV))+exponent;
+	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
 inline pseudo_double_i pdi_abs(pseudo_double_i x) {
@@ -154,7 +166,7 @@ inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 			return (mantissa>>1)+exponent+1;
 		}
 	}
-	return (-(x&EXP_MASK_INV))+exponent;
+	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
 inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
@@ -276,7 +288,7 @@ inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expy=y&EXP_MASK;
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
-	signed_pd_internal vr=(((signed_large_pd_internal)vx)*vy)>>64;
+	signed_pd_internal vr=static_cast<signed_pd_internal>((((signed_large_pd_internal)vx)*vy)>>64);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return (pseudo_double_i)0;
@@ -303,7 +315,7 @@ inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	if(vy==0) { // leave this one in to avoid division bby zero signal
 		PD_DO_ERROR_RANGE;
 	}
-	signed_pd_internal vr=(((((signed_large_pd_internal)vx)>>2)<<64)/vy);
+	signed_pd_internal vr= static_cast<signed_pd_internal>(((((signed_large_pd_internal)vx)>>2)<<64)/vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return (pseudo_double_i)0;
@@ -418,7 +430,7 @@ uint64_t sin_rev_64_fixed(uint64_t x);
 uint64_t atan_rev_64_fixed(uint64_t x);
 
 // useful to expose this
-inline uint64_t multu64hi(uint64_t x,uint64_t y) {return (((unsigned __int128)x)*y)>>64;}
+inline uint64_t multu64hi(uint64_t x,uint64_t y) {return static_cast<signed_pd_internal>((((unsigned_large_pd_internal)x)*y)>>64);}
 
 void debug_pdi_output(pseudo_double_i d);
 

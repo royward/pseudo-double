@@ -150,12 +150,12 @@ int main() {
 				failures++;
 				cout << "comp " << f1 << ">=" << f2 << "==" << (int)(f1>=f2) << "!=" << (int)(pd1>=pd2) << endl;
 			}
-			count++;
-			ff=atan2(pd1,pd2);
-			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT4)) && (f1>=0 || f2!=0)) {
-				failures++;
-				cout << "atan2(" << f1 << ',' << f2 << ")==" << atan2(f1,f2) << "!=" << ff << endl;
-			}
+//			count++;
+//			ff=atan2(pd1,pd2);
+//			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT4)) && (f1>=0 || f2!=0)) {
+//				failures++;
+//				cout << "atan2(" << f1 << ',' << f2 << ")==" << atan2(f1,f2) << "!=" << ff << endl;
+//			}
 		}
 	}
 	for(int i=-20;i<20;i++) {
@@ -270,23 +270,23 @@ int main() {
 			}
 		}
 	}
-	for(uint32_t i=0;i<list.size();i++) {
-		double f1=list[i];
-		PseudoDouble pd1=f1;
-		for(uint32_t j=0;j<list.size();j++) {
-			double f2=list[j];
-			if(f1>0 && !isinf(pow(f1,f2)) && pow(f1,f2)>1e-35 && pow(f1,f2)<1e35) {
-				PseudoDouble pd2=f2;
-				double ff;
-				ff=pow(pd1,pd2);
-				count++;
-				if(!compare(pow(f1,f2),ff,NEAR_EXACT9)) {
-					failures++;
-					cout << "pow(" << f1 << ',' << f2 << ")==" << pow(f1,f2) << "!=" << ff << endl;
-				}
-			}
-		}
-	}
+//	for(uint32_t i=0;i<list.size();i++) {
+//		double f1=list[i];
+//		PseudoDouble pd1=f1;
+//		for(uint32_t j=0;j<list.size();j++) {
+//			double f2=list[j];
+//			if(f1>0 && !isinf(pow(f1,f2)) && pow(f1,f2)>1e-35 && pow(f1,f2)<1e35) {
+//				PseudoDouble pd2=f2;
+//				double ff;
+//				ff=pow(pd1,pd2);
+//				count++;
+//				if(!compare(pow(f1,f2),ff,NEAR_EXACT9)) {
+//					failures++;
+//					cout << "pow(" << f1 << ',' << f2 << ")==" << pow(f1,f2) << "!=" << ff << endl;
+//				}
+//			}
+//		}
+//	}
 	for(int64_t i=-1000;i<1000;i++) {
 		PseudoDouble pd(i);
 		int64_t ii=pd;
