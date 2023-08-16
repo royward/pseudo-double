@@ -32,6 +32,10 @@
 
 #include <stdint.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 // Can set any of these or just use the defaults
 //#define PSEUDO_DOUBLE_TOTAL_BITS 64
 //#define PSEUDO_DOUBLE_EXP_BITS 16
@@ -60,8 +64,21 @@
 typedef uint64_t pseudo_double_i;
 typedef uint64_t unsigned_pd_internal;
 typedef int64_t signed_pd_internal;
-typedef __int128 signed_large_pd_internal;
+#ifdef _MSC_VER // windows
+#define clz (uint32_t)__lzcnt64
+inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {unsigned __int64 ret;_umul128(x,y,&ret);return ret;}
+inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {__int64 ret;_mul128(x,y,&ret);return ret;}
+inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {__int64 dummy;return _div128(x,0,y,&dummy);}
+#elif defined(__GNUC__) || defined(__clang__) // gcc/clang
 #define clz __builtin_clzll
+typedef __int128 signed_large_pd_internal;
+typedef unsigned __int128 unsigned_large_pd_internal;
+inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return (signed_pd_internal)(((((signed_large_pd_internal)x)*y)>>64));}
+inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return (unsigned_pd_internal)((((unsigned_large_pd_internal)x)*y)>>64);}
+inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return (signed_pd_internal)((((signed_large_pd_internal)x)<<64)/y);}
+#else
+#error Compiler is not gcc, clang or Visual Studio. Need to define clz and 128 bit arithmetic for your compiler
+#endif
 #elif PSEUDO_DOUBLE_TOTAL_BITS==32
 typedef uint32_t pseudo_double_i;
 typedef uint32_t unsigned_pd_internal;
@@ -133,7 +150,7 @@ inline pseudo_double_i pdi_neg(pseudo_double_i x) {
 			return (mantissa<<1)+exponent-1;
 		}
 	}
-	return (-(x&EXP_MASK_INV))+exponent;
+	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
 inline pseudo_double_i pdi_abs(pseudo_double_i x) {
@@ -154,7 +171,7 @@ inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 			return (mantissa>>1)+exponent+1;
 		}
 	}
-	return (-(x&EXP_MASK_INV))+exponent;
+	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
 inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
@@ -276,7 +293,7 @@ inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expy=y&EXP_MASK;
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
-	signed_pd_internal vr=(((signed_large_pd_internal)vx)*vy)>>64;
+	signed_pd_internal vr=mults64hi(vx,vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return (pseudo_double_i)0;
@@ -303,7 +320,7 @@ inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	if(vy==0) { // leave this one in to avoid division bby zero signal
 		PD_DO_ERROR_RANGE;
 	}
-	signed_pd_internal vr=(((((signed_large_pd_internal)vx)>>2)<<64)/vy);
+	signed_pd_internal vr=divs64hi(vx>>2,vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return (pseudo_double_i)0;
@@ -416,9 +433,6 @@ uint64_t sin_rev_64_fixed(uint64_t x);
 // calculate atan_rev(x)
 // result is 2.62 unsigned fixed in the range [0,1]
 uint64_t atan_rev_64_fixed(uint64_t x);
-
-// useful to expose this
-inline uint64_t multu64hi(uint64_t x,uint64_t y) {return (((unsigned __int128)x)*y)>>64;}
 
 void debug_pdi_output(pseudo_double_i d);
 

@@ -69,7 +69,7 @@ pseudo_double_i double_to_pdi(double d) {
 	mantissa=shift_left_signed(mantissa,PSEUDO_DOUBLE_TOTAL_BITS-54);
 	//mantissa=(mantissa+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
 	if(negative) {
-		return -(mantissa&EXP_MASK_INV)+exponent;
+		return -((signed_pd_internal)(mantissa&EXP_MASK_INV))+exponent;
 	} else {
 		return (mantissa&EXP_MASK_INV)+exponent;
 	}
@@ -407,14 +407,14 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 	}
 	int32_t expy=(y&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
-	signed_pd_internal vr=(((signed_large_pd_internal)vx)*vy)>>64;
+	signed_pd_internal vr=mults64hi(vx,vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return uint64_to_pdi(1); // 2^0=1
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
-	int32_t er=expx+expy-leading_bits;
+	int32_t er=(int32_t)(expx+expy-leading_bits);
 	int32_t new_exponent;
 	uint64_t fraction;
 	if(er<2) {
@@ -436,7 +436,7 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		}
 	} else if(er<=PSEUDO_DOUBLE_EXP_BITS) { // max=2^(2^PSEUDO_DOUBLE_EXP_BITS)), log2(max)=2^PSEUDO_DOUBLE_EXP_BITS
 		uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-er))-1;
-		new_exponent=((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er);
+		new_exponent=(int32_t)(((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er));
 		fraction=((signed_pd_internal)(vr&m))<<er;
 	} else {
 #if PD_ERROR_CHECK
@@ -512,7 +512,7 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		}
 	} else if(e<=PSEUDO_DOUBLE_EXP_BITS) { // max=2^(2^PSEUDO_DOUBLE_EXP_BITS)), log2(max)=2^PSEUDO_DOUBLE_EXP_BITS
 		uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e))-1;
-		new_exponent=((signed_pd_internal)(x&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-e);
+		new_exponent=(int32_t)(((signed_pd_internal)(x&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-e));
 		fraction=((signed_pd_internal)(x&EXP_MASK_INV&m))<<e;
 	} else {
 		// common to have underflow, so leave this in even if errors otherwise are turned off
@@ -811,7 +811,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 	} else if(x==pdi_neg(y)) {
 		ratio=int64_to_pdi(-1);
 	} else {
-		signed_pd_internal vr=(((((signed_large_pd_internal)vy)>>2)<<64)/vx);
+		signed_pd_internal vr=(signed_pd_internal)divs64hi((vy>>2),vx);
 		if(vr==0) {
 			ratio=0;
 		} else {
