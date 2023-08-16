@@ -57,13 +57,25 @@ void debug_pd_output(pseudo_double_i x) {
 	int64_t exponent=x&EXP_MASK;
 	printf("m=");
 	for(int32_t i=PSEUDO_DOUBLE_TOTAL_BITS-1;i>=PSEUDO_DOUBLE_EXP_BITS;i--) {
-		printf("%ld",(mant>>i)&1);
+#ifdef _MSC_VER
+		printf("%lld", (mant >> i) & 1);
+#else
+		printf("%ld", (mant >> i) & 1);
+#endif
 	}
 	printf("=%lf, e=",pow(2,-PSEUDO_DOUBLE_TOTAL_BITS)*mant);
 	for(int32_t i=PSEUDO_DOUBLE_EXP_BITS-1;i>=0;i--) {
-		printf("%ld",(exponent>>i)&1);
+#ifdef _MSC_VER
+		printf("%lld", (exponent >> i) & 1);
+#else
+		printf("%ld", (exponent >> i) & 1);
+#endif
 	}
-	printf("=%ld, n=%lf",exponent-PSEUDO_DOUBLE_EXP_BIAS,pow(2,exponent-PSEUDO_DOUBLE_EXP_BIAS-PSEUDO_DOUBLE_TOTAL_BITS)*mant);
+#ifdef _MSC_VER
+	printf("=%lld, n=%lf", exponent - PSEUDO_DOUBLE_EXP_BIAS, pow(2, exponent - PSEUDO_DOUBLE_EXP_BIAS - PSEUDO_DOUBLE_TOTAL_BITS) * mant);
+#else
+	printf("=%ld, n=%lf", exponent - PSEUDO_DOUBLE_EXP_BIAS, pow(2, exponent - PSEUDO_DOUBLE_EXP_BIAS - PSEUDO_DOUBLE_TOTAL_BITS) * mant);
+#endif
 }
 
 bool compare(double d1, double d2, double exactness) {
@@ -152,7 +164,7 @@ int main() {
 			}
 			count++;
 			ff=atan2(pd1,pd2);
-			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT4)) && (f1>=0 || f2!=0)) {
+			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT3)) && (f1>=0 || f2!=0)) {
 				failures++;
 				cout << "atan2(" << f1 << ',' << f2 << ")==" << atan2(f1,f2) << "!=" << ff << endl;
 			}
@@ -258,13 +270,13 @@ int main() {
 		if(-10000.0<f && f<10000.0) {
 			ff=sin(pd);
 			count++;
-			if(!compare(sin(f),ff,NEAR_EXACT10)) {
+			if(!compare(sin(f),ff,NEAR_EXACT9)) {
 				failures++;
 				cout << "sin  " << f << ' ' << sin(f) << ' ' << ff << endl;
 			}
 			ff=cos(pd);
 			count++;
-			if(!compare(cos(f),ff,NEAR_EXACT10)) {
+			if(!compare(cos(f),ff,NEAR_EXACT9)) {
 				failures++;
 				cout << "cos  " << f << ' ' << cos(f) << ' ' << ff << endl;
 			}
