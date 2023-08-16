@@ -196,6 +196,10 @@ uint64_t pdi_to_uint64(pseudo_double_i x) {
 	return ret;
 }
 
+int64_t mults64hi(int64_t x,int64_t y) {
+	return ((((__int128)x)*y)>>64);
+}
+
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
 uint64_t inv_sqrt64_fixed(uint64_t x) {
@@ -288,7 +292,6 @@ pseudo_double_i pdi_sqrt(pseudo_double_i x) {
 	}
 	// (1,4) * (1,0.5) = (1,2)
 	uint64_t y=multu64hi((inv_sqrt64_fixed(mantissa>>(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS)),mantissa)<<1;
-	//printf("%lx * %lx = %lx\n",inv_sqrt_internal(mantissa),mantissa,y);
 	return (y&EXP_MASK_INV)+(PSEUDO_DOUBLE_EXP_BIAS>>1)+1+(exponent>>1);
 }
 
@@ -321,14 +324,6 @@ uint64_t exp2_64_fixed(uint64_t x) {
 	u=multu64hi(u,x)+4431396893648852228ULL;
 	u=multu64hi(u,x)+(12786308645201320706ULL+0x2B5B);
 	return (multu64hi(u,x)>>2)+0x4000000000000000ULL;
-}
-
-int64_t mults64hir1(int64_t x,int64_t y) {
-	return ((((__int128)x)*y)>>64)<<1;
-}
-
-int64_t mults64hi(int64_t x,int64_t y) {
-	return ((((__int128)x)*y)>>64);
 }
 
 // ./lolremez --stats --debug --long-double -d 18 -r "0:1" "log2(x+1)"
@@ -376,7 +371,6 @@ uint64_t log2_64_fixed(uint64_t x) {
 	u=mults64hi(u<<1,x) +4435504346812152696LL;
 	u=mults64hi(u<<1,x) -6653256548536882955LL;
 	u=mults64hi(u,x)+   (6653256548920620560LL+0x1005);
-//                       9223372036854775808
 	return mults64hi(u,x)<<2;
 }
 
@@ -461,9 +455,7 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		PD_DO_ERROR_OVERFLOW;
 #endif
 	}
-	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV);
-
 }
 
 pseudo_double_i pdi_log2(pseudo_double_i x) {
@@ -490,8 +482,6 @@ pseudo_double_i pdi_log2(pseudo_double_i x) {
 	int negative=(e<0);
 	int lead_bits=clz(negative?~e:e);
 	return (((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
-// 	printf("%16lx:%5.10f:%5.10f:%d:%16lx:%5.10f:%5.10f\n",x,pdi_to_double(x),log2(pdi_to_double(x)),e,mantissa,ldexp(1.0+ldexp(mantissa,-63),e),ldexp(log2_64_fixed(mantissa),-63));
-// 	return 0;
 }
 
 // e^x=(2^log2(e))^x=2^(log2(e)*x)
@@ -525,7 +515,7 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		new_exponent=((signed_pd_internal)(x&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-e);
 		fraction=((signed_pd_internal)(x&EXP_MASK_INV&m))<<e;
 	} else {
-		// common to have underflow, so leave this in
+		// common to have underflow, so leave this in even if errors otherwise are turned off
 		if(((signed_pd_internal)x)<0) {
 			PD_DO_ERROR_UNDERFLOW;
 #if PD_ERROR_CHECK
@@ -542,7 +532,6 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		PD_DO_ERROR_OVERFLOW;
 	}
 #endif
-	//printf("%16lx:%5.10f:%d:%16lx:%f\n",x,pdi_to_double(x),new_exponent,fraction,ldexp(fraction,-64));
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV);
 }
 

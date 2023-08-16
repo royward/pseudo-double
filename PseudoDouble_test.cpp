@@ -349,8 +349,6 @@ int main() {
 		printf("C (unsafe): Solution 1 = %lf\n",pdi_to_double(sol1));
 		printf("C (unsafe): Solution 2 = %lf\n",pdi_to_double(sol2));
 	}
-
-	
 // This can be modified to test indivual internal functions
 // 	for(uint64_t i=0x4000000000000000ULL;i<=0xFF00000000000000ULL;i+=0x40000000000000ULL) {
 // 		cout << hex << i << ' ' << inv_sqrt64_internal(i) << dec << endl;
