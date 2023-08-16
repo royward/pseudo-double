@@ -196,10 +196,6 @@ uint64_t pdi_to_uint64(pseudo_double_i x) {
 	return ret;
 }
 
-int64_t mults64hi(int64_t x,int64_t y) {
-	return ((((__int128)x)*y)>>64);
-}
-
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
 uint64_t inv_sqrt64_fixed(uint64_t x) {
