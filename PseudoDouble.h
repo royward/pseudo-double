@@ -50,9 +50,11 @@ public:
 	inline PseudoDouble(int16_t f) {val=int64_to_pdi(f);}
 	inline PseudoDouble(int32_t f) {val=int64_to_pdi(f);}
 	inline PseudoDouble(int64_t f) {val=int64_to_pdi(f);}
+	inline PseudoDouble(long long f) {val=int64_to_pdi(f);}
 	inline PseudoDouble(uint16_t f) {val=uint64_to_pdi(f);}
 	inline PseudoDouble(uint32_t f) {val=uint64_to_pdi(f);}
 	inline PseudoDouble(uint64_t f) {val=uint64_to_pdi(f);}
+	inline PseudoDouble(unsigned long long f) {val=uint64_to_pdi(f);}
 	inline operator double() const {return pdi_to_double(val);}
 	inline operator int16_t() const {return static_cast<int16_t>(pdi_to_int64(val));}
 	inline operator int32_t() const {return static_cast<int32_t>(pdi_to_int64(val));}

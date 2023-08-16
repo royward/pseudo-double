@@ -323,14 +323,6 @@ uint64_t exp2_64_fixed(uint64_t x) {
 	return (multu64hi(u,x)>>2)+0x4000000000000000ULL;
 }
 
-int64_t mults64hir1(int64_t x,int64_t y) {
-	return static_cast<int64_t>(((((unsigned_large_pd_internal)x)*y)>>64)<<1);
-}
-
-int64_t mults64hi(int64_t x,int64_t y) {
-	return static_cast<int64_t>(((((unsigned_large_pd_internal)x)*y)>>64));
-}
-
 // ./lolremez --stats --debug --long-double -d 18 -r "0:1" "log2(x+1)"
 // long double f(long double x) {
 //     long double u = -9.3911951398832967647e-5l;
@@ -413,14 +405,14 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 	}
 	int32_t expy=(y&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
-	signed_pd_internal vr= static_cast<signed_pd_internal>((((signed_large_pd_internal)vx)*vy)>>64);
+	signed_pd_internal vr=mults64hi(vx,vy);
 	if(vr==0) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return uint64_to_pdi(1); // 2^0=1
 	}
 	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
-	int32_t er=static_cast<int32_t>(expx+expy-leading_bits);
+	int32_t er=(int32_t)(expx+expy-leading_bits);
 	int32_t new_exponent;
 	uint64_t fraction;
 	if(er<2) {
@@ -442,7 +434,7 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		}
 	} else if(er<=PSEUDO_DOUBLE_EXP_BITS) { // max=2^(2^PSEUDO_DOUBLE_EXP_BITS)), log2(max)=2^PSEUDO_DOUBLE_EXP_BITS
 		uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-er))-1;
-		new_exponent= static_cast<int32_t>((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er);
+		new_exponent=(int32_t)(((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er));
 		fraction=((signed_pd_internal)(vr&m))<<er;
 	} else {
 #if PD_ERROR_CHECK
@@ -522,7 +514,7 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		}
 	} else if(e<=PSEUDO_DOUBLE_EXP_BITS) { // max=2^(2^PSEUDO_DOUBLE_EXP_BITS)), log2(max)=2^PSEUDO_DOUBLE_EXP_BITS
 		uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e))-1;
-		new_exponent= static_cast<int32_t>((signed_pd_internal)(x&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-e);
+		new_exponent=(int32_t)(((signed_pd_internal)(x&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-e));
 		fraction=((signed_pd_internal)(x&EXP_MASK_INV&m))<<e;
 	} else {
 		// common to have underflow, so leave this in
@@ -822,7 +814,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 	} else if(x==pdi_neg(y)) {
 		ratio=int64_to_pdi(-1);
 	} else {
-		signed_pd_internal vr=static_cast<signed_pd_internal>(((((signed_large_pd_internal)vy)>>2)<<64)/vx);
+		signed_pd_internal vr=(signed_pd_internal)divs64hi((vy>>2),vx);
 		if(vr==0) {
 			ratio=0;
 		} else {
