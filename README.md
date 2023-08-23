@@ -147,7 +147,7 @@ See Functions.md for details of all the provided functions.
 
 # Overflows
 
-There is an error value (PD_NAN in C) overflows/errors/out_of_range are represented by all bits set to 1.
+There is an error value (PD_NAN in C) used to represent overflows/errors/out_of_range. It is represented by all bits set to 1.
 
 There are three macros that can be set to determine the behaviour in these cases:
 
