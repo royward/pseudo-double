@@ -69,13 +69,13 @@ The form of these is:
 
 	mlib: x<y
 	C: (use pd_gt with reversed arguments)
-	inline bool PseudoDouble::operator<(const PseudoDouble x) const;
+	C++ inline bool PseudoDouble::operator<(const PseudoDouble x) const;
 
 ### Less than or equal to
 
 	mlib: x<=y
 	C: (use pd_gte with reversed arguments)
-	inline bool PseudoDouble::operator<=(const PseudoDouble x) const;
+	C++: inline bool PseudoDouble::operator<=(const PseudoDouble x) const;
 
 If using pseudo_double_i, == and != can be used directly, as long as both sides are pseudo_double_i.
 
@@ -83,14 +83,19 @@ If using pseudo_double_i, == and != can be used directly, as long as both sides 
 
  	C: inline bool pd_gt_zero(pseudo_double x)
   	C++: inline bool PseudoDouble::gt_zero() const;
+   
 	C: inline bool pd_gte_zero(pseudo_double x)
  	C++: inline bool PseudoDouble::gte_zero() const;
+  
 	C: inline bool pd_lt_zero(pseudo_double x)
  	C++: inline bool PseudoDouble::lt_zero() const;
+  
 	C: inline bool pd_lte_zero(pseudo_double x)
  	C++: inline bool PseudoDouble::lte_zero() const;
+  
 	C: inline bool pd_eq_zero(pseudo_double x)
  	C++: inline bool PseudoDouble::eq_zero() const;
+  
 	C: inline bool pd_neq_zero(pseudo_double x)
  	C++: inline bool PseudoDouble::neq_zero() const;
 
