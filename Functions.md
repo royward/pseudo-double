@@ -15,49 +15,55 @@ The form of these is:
 
 	mlib: x+y
 	C: inline int pd_add(pseudo_double x, pseudo_double y);
-	inline PseudoDouble PseudoDouble::operator+(const PseudoDouble x) const;
+	C++: inline PseudoDouble PseudoDouble::operator+(const PseudoDouble x) const;
 
 ### Subtract
 
 	mlib: x-y
 	C: inline int pd_sub(pseudo_double x, pseudo_double y);
-	inline PseudoDouble PseudoDouble::operator-(const PseudoDouble x) const;
+	C++: inline PseudoDouble PseudoDouble::operator-(const PseudoDouble x) const;
 
 ### Multiply
 
 	mlib: x*y
 	C: inline int pd_mult(pseudo_double x, pseudo_double y);
-	inline PseudoDouble PseudoDouble::operator*(const PseudoDouble x) const;
+	C++: inline PseudoDouble PseudoDouble::operator*(const PseudoDouble x) const;
 
 ### Divide
 
 	mlib: x/y
 	C: inline int pd_div(pseudo_double x, pseudo_double y);
-	inline PseudoDouble PseudoDouble::operator/(const PseudoDouble x) const;
+	C++: inline PseudoDouble PseudoDouble::operator/(const PseudoDouble x) const;
 
 ### Negate
 
 	mlib: -x
 	C: inline int pd_neg(pseudo_double x);
-	inline PseudoDouble PseudoDouble::operator-() const;
+	C++: inline PseudoDouble PseudoDouble::operator-() const;
 
 ### Equal
 
 	mlib: x==y
 	C: (use integer x==y)
-	inline bool PseudoDouble::operator==(const PseudoDouble x) const;
+	C++: inline bool PseudoDouble::operator==(const PseudoDouble x) const;
 
 ### Not equal
 
 	mlib: x!=y
 	C: (use integer x!=y)
-	inline bool PseudoDouble::operator!=(const PseudoDouble x) const;
+	C++: inline bool PseudoDouble::operator!=(const PseudoDouble x) const;
+
+### Greater than
+
+	mlib: x>y
+	C: inline int pd_gt(pseudo_double x, pseudo_double y);
+	C++: inline bool PseudoDouble::operator>(const PseudoDouble x) const;
 
 ### Greater than or equal to
 
 	mlib: x>=y
 	C: inline int pd_gte(pseudo_double x, pseudo_double y);
-	inline bool PseudoDouble::operator>=(const PseudoDouble x) const;
+	C++: inline bool PseudoDouble::operator>=(const PseudoDouble x) const;
 
 ### Less than
 
@@ -71,16 +77,24 @@ The form of these is:
 	C: (use pd_gte with reversed arguments)
 	inline bool PseudoDouble::operator<=(const PseudoDouble x) const;
 
+If using pseudo_double_i, == and != can be used directly, as long as both sides are pseudo_double_i.
+
 ## Quick comparison with 0.
 
-For C, just do a straight integer comparison with zero
+ 	C: inline bool pd_gt_zero(pseudo_double x)
+  	C++: inline bool PseudoDouble::gt_zero() const;
+	C: inline bool pd_gte_zero(pseudo_double x)
+ 	C++: inline bool PseudoDouble::gte_zero() const;
+	C: inline bool pd_lt_zero(pseudo_double x)
+ 	C++: inline bool PseudoDouble::lt_zero() const;
+	C: inline bool pd_lte_zero(pseudo_double x)
+ 	C++: inline bool PseudoDouble::lte_zero() const;
+	C: inline bool pd_eq_zero(pseudo_double x)
+ 	C++: inline bool PseudoDouble::eq_zero() const;
+	C: inline bool pd_neq_zero(pseudo_double x)
+ 	C++: inline bool PseudoDouble::neq_zero() const;
 
-	C++: inline bool PseudoDouble::gt_zero() const;
-	C++: inline bool PseudoDouble::gte_zero() const;
-	C++: inline bool PseudoDouble::lt_zero() const;
-	C++: inline bool PseudoDouble::lte_zero() const;
-	C++: inline bool PseudoDouble::eq_zero() const;
-	C++: inline bool PseudoDouble::neq_zero() const;
+If using pseudo_double_i, just do a straight integer comparison with zero (**note** that does not work with any other number)
 
 ## Conversion
 
@@ -243,13 +257,13 @@ The following identities are exactly true for all integer n and pseudodouble x>0
 * pd_atan2_rev(-x,0) =3/4
 * pd_atan2_rev(-x,x) =7/8
 
-### sin of revolutions
+### sin in revolutions
 
 	mlib: sin(x*(2.0*M_PI))
 	C: pseudo_double pd_sin_rev(pseudo_double x);
 	C++: PseudoDouble sin_rev(const PseudoDouble x);
 
-### cos of revolutions
+### cos in revolutions
 
 	mlib: cos(x*(2.0*M_PI))
 	C: pseudo_double pd_cos_rev(pseudo_double x);
@@ -261,13 +275,13 @@ The following identities are exactly true for all integer n and pseudodouble x>0
 	C: pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x);
 	C++: PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x);
 
-### sin of radians
+### sin in radians
 
 	mlib: sin(x)
 	C: pseudo_double pd_sin(pseudo_double x);
 	C++: PseudoDouble sin(const PseudoDouble x);
 
-### cos of radians
+### cos in radians
 
 	mlib: cos(x)
 	C: pseudo_double pd_cos(pseudo_double x);
@@ -283,7 +297,11 @@ The following identities are exactly true for all integer n and pseudodouble x>0
 
 	C/C++: inline uint64_t multu64hi(uint64_t x,uint64_t y);
 	calculate (x*y)>>64
-	Useful if x,y and result are considered 0.64 fixed ints
+	Useful if x,y and result are considered 0.64 fixed unsigned ints
+
+	C/C++: inline int64_t mults64hi(int64_t x,int64_t y);
+	calculate (x*y)>>64
+	Useful if x,y and result are considered 0.64 fixed signed ints
 
 	C/C++: uint64_t inv_sqrt64_fixed(uint64_t x);
 	calculate 1/sqrt(x)
