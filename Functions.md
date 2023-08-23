@@ -201,8 +201,8 @@ If using pseudo_double_i, just do a straight integer comparison with zero (**not
 
 The base fuctions are pd_exp2 and pd_log2, so:
 
-* pd_exp2(n) is exactly 2^n (subject to no overflow)
-* pd_log2(2^n) is exactly n
+* pd_exp2($n$) is exactly $2^n$ (subject to no overflow)
+* pd_log2($2^n$) is exactly $n$
 
 ### binary exponent
 
@@ -234,7 +234,7 @@ The base fuctions are pd_exp2 and pd_log2, so:
 	C: pseudo_double pd_log10(pseudo_double x);
 	C++: PseudoDouble log10(const PseudoDouble x);
 
-### power, x^y
+### power, $x^y$
 
 	mlib: pow(x,y)
 	C: pseudo_double pd_pow(pseudo_double x, pseudo_double y);
@@ -244,23 +244,23 @@ The base fuctions are pd_exp2 and pd_log2, so:
 
 Becasuse this is aimed at games rather than scientific applications, the base trigonometry functions use revolutions (turns). A revolution is $2\pi$ radians.
 
-The following identities are exactly true for all integer n and pseudodouble x>0:
+The following identities are exactly true for all integer $n$ and pseudodouble x>0:
 
-* pd_sin_rev(n/2)=0
-* pd_sin_rev(n+1/4)=1
-* pd_sin_rev(n+3/4)=-1
-* pd_cos_rev(n/2+1/4)=0
-* pd_cos_rev(n)=1
-* pd_cos_rev(n+1/2)=-1
-* pd_atan2_rev(0,0)  =0
-* pd_atan2_rev(0,x)  =0
-* pd_atan2_rev(x,x)  =1/8
-* pd_atan2_rev(x,0)  =1/4
-* pd_atan2_rev(x,-x) =3/8
-* pd_atan2_rev(0,-x) =1/2
-* pd_atan2_rev(-x,-x)=5/8
-* pd_atan2_rev(-x,0) =3/4
-* pd_atan2_rev(-x,x) =7/8
+* pd_sin_rev($\frac{n}{2}$) = 0
+* pd_sin_rev($n+\frac{1}{4}$) = 1
+* pd_sin_rev($n+\frac{3}{4}$) = -1
+* pd_cos_rev($\frac{n}{2}+\frac{1}{4}$) = 0
+* pd_cos_rev($n$) = 1
+* pd_cos_rev($n+\frac{1}{2}$) = -1
+* pd_atan2_rev(0,0)  = 0
+* pd_atan2_rev(0,x)  = 0
+* pd_atan2_rev(x,x)  = $\frac{1}{8}$
+* pd_atan2_rev(x,0)  = $\frac{1}{4}$
+* pd_atan2_rev(x,-x) = $\frac{3}{8}$
+* pd_atan2_rev(0,-x) = $\frac{1}{2}$
+* pd_atan2_rev(-x,-x)= $\frac{5}{8}$
+* pd_atan2_rev(-x,0) = $\frac{3}{4}$
+* pd_atan2_rev(-x,x) = $\frac{7}{8}$
 
 ### sin in revolutions
 
