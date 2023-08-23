@@ -8,9 +8,9 @@ This is a partial floating point library that only uses integer CPU instructions
 
 https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-procedural-generation
 
-There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-double library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point.
+There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-double library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point. I have not measured it against other soft floating point implementations - I leave that as an exercise for the reader.
 
-This library has both C and C++ bindings, and it has been tested on x86-x64 with gcc/g++ and ARMv8-A with clang.
+This library has both C and C++ bindings, and it has been tested on x86-64 with gcc/g++/clang, ARMv8-A with clang and x86-64 with Visual C++.
 
 It also allows the number of expononent bits to be set with a macro, which enables choices to be made in the range/precision tradeoff.
 
@@ -22,7 +22,7 @@ The main use cases for this code are:
 
 * Applications where a range/precision tradeoff different than the IEEE 754 one is useful setting (see PSEUDO_DOUBLE_EXP_BITS below).
 
-* This may be adaptable to hardware that doesn't support floating point but double precision or the speedup of not requiring IEEE 754 is still desired. The would likely require considerable rework, as a processor that doesn't already support floating point is unlikely to support things like 128 bit integers.
+* This may be adaptable to hardware that doesn't support floating point but double precision or the speedup of not requiring IEEE 754 is still desired. The would likely require considerable rework, as a processor that doesn't already support floating point is unlikely to support the 128 bit integer operations needed for multiplication and division.
 
 # Usage
 
@@ -90,7 +90,7 @@ Note that we have to be careful constructing the a=0.3 The code:
 
 	pseudo_double a=double_to_pd(0.3);
 
-would also work, but that is dependent on hardware floating point and may not be guaranteed to give the same result cross platform.
+would also work, but that is dependent on hardware floating point and is not guaranteed to give the same result cross platform.
 
 ### C++ with PseudoDouble
 
@@ -177,7 +177,7 @@ If the number of the exponent bits is $n$:
 
 * Any number $x$ will be in the range $-2^{2^{n-1}-2} \le x < -2^{-2^{n-1}-2}$ or $2^{-2^{n-1}-2} \le x < 2^{2^{n-1}-2}$ If $n=16$ that would be $-2^{32766} \le x < -2^{-32770}$ or $2^{-32770} \le x < 2^{32766}$
 
-Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other values, as the CPU can take advantage of the internal integer sizes rather than having to do shifts.
+Setting PSEUDO_DOUBLE_EXP_BITS to 8, 16 or 32 will be slightly faster than other values, as the CPU can take advantage of the internal integer sizes rather than having to do shifts. The default is 16 bits.
 
 ## PD_ERROR_CHECK
 
@@ -219,7 +219,7 @@ They are documented in the last section of Functions.md and do not depend on any
 
 This library is designed to be a tradeoff between speed and accuracy. It does not get full IEEE 754 accuracy although it is often close, but should be reasonably performant, although of course not even close to native floating point.
 
-Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, speed, (dynamic) range and (cross platform) consistency.
+Four properties to consider when determining how to perform calculations on continuous quantities (things that would be represented mathematically with real numbers): precision, (dynamic) range, speed and (cross platform) consistency.
 
 | Type          | Size (bits) | Exponent (bits) | Precision (bits) | Range                                                    | Time | Consistency |
 | ------------- | ----------- | --------------- | ---------------- | -------------------------------------------------------- | -----| ----------- |
@@ -297,15 +297,17 @@ The upside is that because this case only occurs with power of two or negative p
 
 # Porting to other compilers
 
-There are two non-standard features that are gcc/g++/clang specific and might need to be adjusted for other compilers:
+pseudo-double has been tested with gcc/g++, clang and Visual C++.
 
-### 128 bit signed integers
+There are two non-standard features that are compiler specific and might need to be adjusted for other compilers (there are compiler dependent definitions on line ~70 of pseudu_double.h:
 
-gcc/g++/clang uses __int128. This is required for multiplication, division, pow and atan2.
+### 128 bit signed/unsigned integer operations
+
+gcc/g++/clang uses __int128 tto implement the internal functions multu64hi, mults64hi and divs64hi. Visual C++ uses intrinsics these. These functions are required for multiplication, division, pow and atan2.
 
 ### Count leading zeros
 
-gcc/g++/clang uses __builtin_clzll. This is required for all functions. For x86-64 the intel intrinsic _lzcnt_u64 is available. 
+pseudo-double uses the macro clz, which for gcc/g++/clang aliases to __builtin_clzll and for Visual C++ aliases to __lzcnt64. This is required for all functions. For x86-64 the intel intrinsic _lzcnt_u64 is available. 
 
 # Other notes
 
