@@ -28,7 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "pseudo_double.h"
-#include <math.h>
+#include <math.h> // Only used to bring in NAN
 
 pseudo_double_i double_to_pdi(double d) {
 	union {
