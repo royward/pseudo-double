@@ -486,10 +486,10 @@ inline pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {return crea
 inline pseudo_double pd_sin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin(x.val));}
 inline pseudo_double pd_cos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos(x.val));}
 inline pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2(x.val,y.val));}
-inline bool pd_gt_zero(pseudo_double x) {return (x.val>0);}
-inline bool pd_gte_zero(pseudo_double x) {return (x.val>=0);}
-inline bool pd_lt_zero(pseudo_double x) {return (x.val<0);}
-inline bool pd_lte_zero(pseudo_double x) {return (x.val<=0);}
+inline bool pd_gt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>0);}
+inline bool pd_gte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>=0);}
+inline bool pd_lt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<0);}
+inline bool pd_lte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<=0);}
 inline bool pd_eq_zero(pseudo_double x) {return (x.val==0);}
 inline bool pd_neq_zero(pseudo_double x) {return (x.val!=0);}
 #endif // PSEUDO_DOUBLE_H
