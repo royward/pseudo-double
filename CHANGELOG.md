@@ -1,5 +1,9 @@
 # Change Log
 
+# 1.0.4 - 2023-11-19
+
+* Fixed the zero comparison operators 
+
 # 1.0.3 - 2023-08-22
 
 * Added support for Visual C++
