@@ -299,11 +299,11 @@ The upside is that because this case only occurs with power of two or negative p
 
 pseudo-double has been tested with gcc/g++, clang and Visual C++.
 
-There are two non-standard features that are compiler specific and might need to be adjusted for other compilers (there are compiler dependent definitions on line ~70 of pseudu_double.h:
+There are two non-standard features that are compiler specific and might need to be adjusted for other compilers (there are compiler dependent definitions on line ~70 of pseudo_double.h:
 
 ### 128 bit signed/unsigned integer operations
 
-gcc/g++/clang uses __int128 tto implement the internal functions multu64hi, mults64hi and divs64hi. Visual C++ uses intrinsics these. These functions are required for multiplication, division, pow and atan2.
+gcc/g++/clang uses __int128 tto implement the internal functions multu64hi, mults64hi and divs64hi. Visual C++ uses intrinsics for these. These functions are required for multiplication, division, pow and atan2.
 
 ### Count leading zeros
 
