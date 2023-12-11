@@ -98,7 +98,7 @@ pseudo_double_i uint64_to_pdi(uint64_t d) {
 		return 0;
 	}
 	int lead_bits=clz(d);
-	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
+	return ((shift_left_unsigned(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
 double pdi_to_double(pseudo_double_i x) {
