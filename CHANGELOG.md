@@ -1,6 +1,6 @@
 # Change Log
 
-# 1.0.4 - 2023-12-10
+# 1.0.5 - 2023-12-10
 
 * Fixed bug where uint64_to_pdi treated argument as signed rather than unsigned
 
