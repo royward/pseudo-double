@@ -41,6 +41,10 @@
 #define PD_DO_ERROR_RANGE throw std::range_error("range");
 #endif
 
+#ifndef PD_DO_ERROR_SYNTAX
+#define PD_DO_ERROR_SYNTAX throw std::runtime("syntax");
+#endif
+
 #include "pseudo_double.h"
 
 class PseudoDouble {
@@ -113,6 +117,8 @@ private:
 	friend PseudoDouble PD_create_fixed10(int64_t x, int32_t e);
 	friend PseudoDouble PD_create_fixed2(int64_t x, int32_t e);
 	friend int64_t PD_get_fixed2(PseudoDouble x, int32_t e);
+	friend PseudoDouble PD_from_string(std::string str);
+	friend PseudoDouble operator "" _pd(const char* str, std::size_t);
 };
 
 inline PseudoDouble floor(const PseudoDouble x) {return PseudoDouble::create(pdi_floor(x.val));}
@@ -138,8 +144,11 @@ inline PseudoDouble fabs(const PseudoDouble x) {return PseudoDouble::create(pdi_
 inline PseudoDouble PD_create_fixed10(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed10_to_pdi(x,e));}
 inline PseudoDouble PD_create_fixed2(int64_t x, int32_t e) {return PseudoDouble::create(int64fixed2_to_pdi(x,e));}
 inline int64_t PD_get_fixed2(PseudoDouble x, int32_t e) {return pdi_to_int64fixed2(x.val,e);}
+inline PseudoDouble PD_from_string(std::string str) {return PseudoDouble::create(string_to_pdi(str.c_str()));}
+inline PseudoDouble operator "" _pd(const char* str, std::size_t) {return PseudoDouble::create(string_to_pdi(str));}
 
 const static PseudoDouble PD_HALF=PD_create_fixed2(1,-1);
+const static PseudoDouble PD_QUARTER=PD_create_fixed2(1,-2);
 const static PseudoDouble PD_ZERO=PseudoDouble(0);
 const static PseudoDouble PD_ONE=PseudoDouble(1U);
 const static PseudoDouble PD_TWO=PseudoDouble(2U);

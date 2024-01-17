@@ -108,6 +108,9 @@ typedef int64_t signed_large_pd_internal;
 #ifndef PD_DO_ERROR_RANGE
 #define PD_DO_ERROR_RANGE return PD_NAN
 #endif
+#ifndef PD_DO_ERROR_SYNTAX
+#define PD_DO_ERROR_SYNTAX return PD_NAN
+#endif
 
 inline signed_pd_internal shift_left_signed(signed_pd_internal x, int shift) {
 	if(shift>=0) {
@@ -410,6 +413,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x);
 pseudo_double_i pdi_sin(pseudo_double_i x);
 pseudo_double_i pdi_cos(pseudo_double_i x);
 pseudo_double_i pdi_atan2(pseudo_double_i y, pseudo_double_i x);
+pseudo_double_i string_to_pdi(const char* str);
 
 // x is a 2.62 unsigned fixed in the range (1,4)
 // result is 1.63 unsigned fixed in the range (0.5,1)
@@ -492,4 +496,5 @@ inline bool pd_lt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<0);
 inline bool pd_lte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<=0);}
 inline bool pd_eq_zero(pseudo_double x) {return (x.val==0);}
 inline bool pd_neq_zero(pseudo_double x) {return (x.val!=0);}
+inline pseudo_double string_to_pd(const char* str) {return create_pseudo_double_from_internal(string_to_pdi(str));}
 #endif // PSEUDO_DOUBLE_H

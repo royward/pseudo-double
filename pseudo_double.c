@@ -907,3 +907,40 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 #endif
 	return (pseudo_double_i)(vr+new_exponent);
 }
+
+pseudo_double_i string_to_pdi(const char* str) {
+	bool neg=false;
+	if(*str=='-') {
+		neg=true;
+		str++;
+	}
+	int64_t acc=0;
+	char ch=*str;
+	if(ch=='\0') {
+		PD_DO_ERROR_SYNTAX;
+	}
+	while(ch>='0' && (ch<='9')) {
+		acc=acc*10+(ch-'0');
+		ch=*str++;
+	}
+	if(ch=='\0') {
+		return int64_to_pdi(neg?-acc:acc);
+	}
+	if(ch!='.') {
+		PD_DO_ERROR_SYNTAX;
+	}
+	ch=*str++;
+	int64_t frac_num=0;
+	int64_t frac_den=1;
+	while(ch>='0' && (ch<='9')) {
+		frac_num=frac_num*10+(ch-'0');
+		frac_den*=10;
+		ch=*str++;
+	}
+	if(ch!='\0') {
+		PD_DO_ERROR_SYNTAX;
+	}
+	pseudo_double_i ret=int64_to_pdi(acc)+int64_to_pdi(frac_num)/int64_to_pdi(frac_den);
+	return neg?pdi_neg(ret):ret;
+}
+
