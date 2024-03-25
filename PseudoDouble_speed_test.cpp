@@ -17,6 +17,7 @@
 
 using std::cout;
 using std::endl;
+using namespace pseudodouble;
 
 static const int MAX_MATRIX_SIZE=10;
 

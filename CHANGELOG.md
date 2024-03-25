@@ -1,5 +1,14 @@
 # Change Log
 
+# 1.0.6 - 2024-03-24
+
+* Added a namespace 'pseudodouble' for the C++ version
+* Added functions for max and min
+* fixed a missing <string> include for the C++ version
+* Small documentation fixes
+
+# Change Log
+
 # 1.0.5 - 2023-12-10
 
 * Fixed bug where uint64_to_pdi treated argument as signed rather than unsigned

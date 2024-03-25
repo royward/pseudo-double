@@ -46,6 +46,9 @@
 #endif
 
 #include "pseudo_double.h"
+#include <string>
+
+namespace pseudodouble {
 
 class PseudoDouble {
 public:
@@ -94,6 +97,8 @@ public:
 private:
 	static PseudoDouble create(pseudo_double_i pdi) {PseudoDouble ret;ret.val=pdi;return ret;}
 	pseudo_double_i val;
+	friend PseudoDouble min(const PseudoDouble x, const PseudoDouble y);
+	friend PseudoDouble max(const PseudoDouble x, const PseudoDouble y);
 	friend PseudoDouble floor(const PseudoDouble x);
 	friend PseudoDouble ceil(const PseudoDouble x);
 	friend PseudoDouble round(const PseudoDouble x);
@@ -121,6 +126,8 @@ private:
 	friend PseudoDouble operator "" _pd(const char* str, std::size_t);
 };
 
+inline PseudoDouble min(const PseudoDouble x, const PseudoDouble y) {return PseudoDouble::create(pdi_min(x.val,y.val));}
+inline PseudoDouble max(const PseudoDouble x, const PseudoDouble y) {return PseudoDouble::create(pdi_max(x.val,y.val));}
 inline PseudoDouble floor(const PseudoDouble x) {return PseudoDouble::create(pdi_floor(x.val));}
 inline PseudoDouble ceil(const PseudoDouble x) {return PseudoDouble::create(pdi_ceil(x.val));}
 inline PseudoDouble round(const PseudoDouble x) {return PseudoDouble::create(pdi_round(x.val));}
@@ -158,5 +165,7 @@ const static PseudoDouble PD_TAU=PD_create_fixed10(6283185307179586477,-18);
 const static PseudoDouble PD_2_DIV_PI=PD_ONE/PD_PI_DIV_2;
 const static PseudoDouble PD_INV_PI=PD_ONE/PD_PI;
 const static PseudoDouble PD_INV_TAU=PD_ONE/PD_TAU;
+
+}
 
 #endif // PSEUDO_DOUBLE_CPP_H

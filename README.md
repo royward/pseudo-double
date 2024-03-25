@@ -127,7 +127,7 @@ To built the library test:
 When the generated executable is run, it will print out a line for any failed tests, followed by a count of tests passed/done:
 
 	./pseudo_double_test 
-	Tests done, passed 3832004/3832004
+	Tests done, passed 4651204/4651204
 
 Similarly, the speed tests can be built using:
 
@@ -141,7 +141,7 @@ See Functions.md for details of all the provided functions.
 
 * **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, atan2, abs, fabs
 
-* **Functions not found in <math.h>**: inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-double creation
+* **Functions not found in <math.h>**: max, min, inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-double creation
 
 * **Functions not currently supported by pseudo-double**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
 

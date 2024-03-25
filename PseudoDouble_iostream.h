@@ -38,7 +38,7 @@
 #include <iostream>
 
 // TODO Create a better version of this later if needed. The hack is to just to convert it to a double
-inline std::ostream &operator<<(std::ostream &os, PseudoDouble const &x) { 
+inline std::ostream &operator<<(std::ostream &os, pseudodouble::PseudoDouble const &x) {
     return os << (double)x;
 }
 #endif

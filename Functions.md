@@ -168,9 +168,21 @@ If using pseudo_double_i, just do a straight integer comparison with zero (**not
 
 ### ldexp
 
-	mlib: ldexp(x)
+	mlib: ldexp(x,y)
 	C: inline pseudo_double pd_ldexp(pseudo_double x, int y);
 	C++: PseudoDouble ldexp(const PseudoDouble x, int y);
+
+### max
+
+	mlib: std::max(x,y) (c++ only)
+	C: inline pseudo_double pd_max(pseudo_double x, pseudo_double y);
+	C++: PseudoDouble max(const PseudoDouble x, PseudoDouble y);
+
+### min
+
+	mlib: std::min(x,y) (c++ only)
+	C: inline pseudo_double pd_min(pseudo_double x, pseudo_double y);
+	C++: PseudoDouble min(const PseudoDouble x, PseudoDouble y);
 
 ## Square root
 

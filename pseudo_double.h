@@ -177,6 +177,34 @@ inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
+inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
+	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+		return neg?x:y;
+	}
+	// signs are the same, check exponent
+	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiiff!=0) {
+		return ((expdiiff>0)^neg)?x:y;
+	}
+	// exponents are the same so don't need to mask off, check mantissa
+	return (x>y)?x:y;
+}
+
+inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
+	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+		return neg?y:x;
+	}
+	// signs are the same, check exponent
+	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiiff!=0) {
+		return ((expdiiff>0)^neg)?y:x;
+	}
+	// exponents are the same so don't need to mask off, check mantissa
+	return (x>y)?y:x;
+}
+
 inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
 	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
@@ -396,6 +424,8 @@ inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
 pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e);
 int64_t pdi_to_int64fixed2(pseudo_double_i d, int32_t e);
 
+pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y);
+pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y);
 pseudo_double_i pdi_floor(pseudo_double_i x);
 pseudo_double_i pdi_ceil(pseudo_double_i x);
 pseudo_double_i pdi_round(pseudo_double_i x);
@@ -459,6 +489,8 @@ inline pseudo_double pd_neg(pseudo_double x) {return create_pseudo_double_from_i
 inline pseudo_double pd_abs(pseudo_double x) {return create_pseudo_double_from_internal(pdi_abs(x.val));}
 inline int pd_gt(pseudo_double x, pseudo_double y) {return pdi_gt(x.val,y.val);}
 inline int pd_gte(pseudo_double x, pseudo_double y) {return pdi_gte(x.val,y.val);}
+inline pseudo_double pd_max(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_max(x.val,y.val));}
+inline pseudo_double pd_min(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_min(x.val,y.val));}
 inline pseudo_double pd_sub(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_sub(x.val,y.val));}
 inline pseudo_double pd_add(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_add(x.val,y.val));}
 inline pseudo_double pd_mult(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_mult(x.val,y.val));}

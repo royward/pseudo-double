@@ -37,7 +37,11 @@
 #include <cstdio>
 #include <iomanip>
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::isinf;
+using std::setprecision;
+using namespace pseudodouble;
 
 const static double NEAR_EXACT14=0.99999999999999;
 const static double NEAR_EXACT13=0.9999999999999;
@@ -86,12 +90,11 @@ bool compare(double d1, double d2, double exactness) {
 	}
 }
 
-//uint64_t atan_rev_64_internal(uint64_t x);
 int main() {
 	uint32_t count=0;
 	uint32_t failures=0;
 	srand(0);
-	vector<double> list;
+	std::vector<double> list;
 	for(int i=-20;i<20;i++) {
 		list.push_back(ldexp(1.0,i));
 		list.push_back(-ldexp(1.0,i));
@@ -133,6 +136,16 @@ int main() {
 			if(!compare(f1*f2,ff,NEAR_EXACT13)) {
 				failures++;
 				cout << "mult " << f1 << '*' << f2 << "==" << f1*f2 << "!=" << ff << endl;
+			}
+			count++;
+			if((pseudodouble::max(pd1,pd2)==pd1) != (std::max(f1,f2)==f1)) {
+				failures++;
+				cout << "difference in max(" << f1 << ',' << f2 << ')' << endl;
+			}
+			count++;
+			if((pseudodouble::min(pd1,pd2)==pd1) != (std::min(f1,f2)==f1)) {
+				failures++;
+				cout << "difference in min(" << f1 << ',' << f2 << ')' << endl;
 			}
 			if(f2!=0) {
 				count++;
