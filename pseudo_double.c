@@ -146,10 +146,10 @@ int64_t pdi_to_int64(pseudo_double_i x) {
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
 		PD_DO_ERROR_OVERFLOW;
 	}
+#endif
 	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
 		return 0;
 	}
-#endif
 	int64_t ret=vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
 	return ret;
 }
