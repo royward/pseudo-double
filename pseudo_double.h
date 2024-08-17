@@ -183,9 +183,9 @@ inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
 		return neg?x:y;
 	}
 	// signs are the same, check exponent
-	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
-	if(expdiiff!=0) {
-		return ((expdiiff>0)^neg)?x:y;
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiff!=0) {
+		return ((expdiff>0)^neg)?x:y;
 	}
 	// exponents are the same so don't need to mask off, check mantissa
 	return (x>y)?x:y;
@@ -197,9 +197,9 @@ inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
 		return neg?y:x;
 	}
 	// signs are the same, check exponent
-	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
-	if(expdiiff!=0) {
-		return ((expdiiff>0)^neg)?y:x;
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiff!=0) {
+		return ((expdiff>0)^neg)?y:x;
 	}
 	// exponents are the same so don't need to mask off, check mantissa
 	return (x>y)?y:x;
@@ -211,9 +211,9 @@ inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
 		return neg;
 	}
 	// signs are the same, check exponent
-	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
-	if(expdiiff!=0) {
-		return (expdiiff>0)^neg;
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiff!=0) {
+		return (expdiff>0)^neg;
 	}
 	// exponents are the same so don't need to mask off, check mantissa
 	return (x>y);
@@ -225,9 +225,9 @@ inline int pdi_gte(pseudo_double_i x, pseudo_double_i y) {
 		return neg;
 	}
 	// signs are the same, check exponent
-	int expdiiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
-	if(expdiiff!=0) {
-		return (expdiiff>0)^neg;
+	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+	if(expdiff!=0) {
+		return (expdiff>0)^neg;
 	}
 	// exponents are the same so don't need to mask off, check mantissa
 	return (x>=y);

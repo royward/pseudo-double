@@ -264,7 +264,7 @@ pseudo_double_i pdi_inv_sqrt(pseudo_double_i x) {
 			return mantissa+3*(PSEUDO_DOUBLE_EXP_BIAS>>1)+3-(exponent>>1);
 		}
 	}
-	return (inv_sqrt64_fixed(mantissa)&EXP_MASK_INV)+3*(PSEUDO_DOUBLE_EXP_BIAS>>1)+2-(exponent>>1);;
+	return (inv_sqrt64_fixed(mantissa)&EXP_MASK_INV)+3*(PSEUDO_DOUBLE_EXP_BIAS>>1)+2-(exponent>>1);
 }
 
 pseudo_double_i pdi_sqrt(pseudo_double_i x) {
