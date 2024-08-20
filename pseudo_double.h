@@ -416,7 +416,7 @@ inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
 		d/=10;
 		e++;
 	}
-	int lead_bits=clz(d);
+	int lead_bits=clz(negative?~d:d);
 	int exp=nexp+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp;
 }
