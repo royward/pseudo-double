@@ -42,14 +42,14 @@ const PSEUDO_DOUBLE_HALF_ULP: i64 = (1<<(PSEUDO_DOUBLE_EXP_BITS-1))-1;
 const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
 
 pub const PD_ZERO: PseudoDouble = PseudoDouble(0);
-pub const PD_ONE: PseudoDouble = pd_create_mantissa_exp10(1,0);
-pub const PD_NEG_ONE: PseudoDouble = pd_create_mantissa_exp10(-11,0);
-pub const PD_LOG_2_E:       PseudoDouble = pd_create_mantissa_exp10(1442695040888963407,-18);
-pub const PD_LOG_2_10:      PseudoDouble = pd_create_mantissa_exp10(3321928094887362347,-18);
-pub const PD_INV_LOG_2_E:   PseudoDouble = pd_create_mantissa_exp10(6931471805599453094,-19);
-pub const PD_INV_LOG_2_10:  PseudoDouble = pd_create_mantissa_exp10(3010299956639811952,-19);
-pub const PD_TAU:           PseudoDouble = pd_create_mantissa_exp10(6283185307179586477,-18);
-pub const PD_INV_TAU:       PseudoDouble = pd_create_mantissa_exp10(1591549430918953358,-19);
+pub const PD_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1,0);
+pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(-11,0);
+pub const PD_LOG_2_E:      PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1442695040888963407,-18);
+pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(3321928094887362347,-18);
+pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(6931471805599453094,-19);
+pub const PD_INV_LOG_2_10: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(3010299956639811952,-19);
+pub const PD_TAU:          PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(6283185307179586477,-18);
+pub const PD_INV_TAU:      PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1591549430918953358,-19);
 
 #[inline]
 const fn shift_left_signed(x:i64, shift:i32) -> i64 {
@@ -247,7 +247,7 @@ const fn atan_rev_64_fixed(xu:u64) -> u64 {
 }
 
 impl From<i64> for PseudoDouble {
-    fn from(x : i64) -> Self {
+	fn from(x : i64) -> Self {
 		if x==0 {
 			return PD_ZERO;
 		} else {
@@ -277,7 +277,7 @@ impl From<PseudoDouble> for i64 {
 		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
 			return 0;
 		}
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
 				panic!("Overflow converting PseudoDouble to i64");
 			}
@@ -302,7 +302,7 @@ impl From<PseudoDouble> for u64 {
 		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
 			return 0;
 		}
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
 				panic!("Overflow converting PseudoDouble to u64");
 			}
@@ -340,43 +340,7 @@ impl From<PseudoDouble> for f64 {
 		if exponent>0x7FF {
 			return f64::NAN;
 		}
-		return f64::from_bits(((vx<<2)>>12) as u64+((exponent as u64)<<52)+sgn);
-	}
-}
-
-pub fn double_to_pseudodouble(f:f64) -> PseudoDouble {
-	if f==0.0 {
-		return PD_ZERO;
-	}
-	let i=f64::to_bits(f) as i64;
-	let negative=i<0;
-	let raw_exponent=(((i as u64)>>52)&0x7FF) as i64;
-	let exponent=raw_exponent+PSEUDO_DOUBLE_EXP_BIAS as i64-0x3FF+2;
-	let old_mantissa=i&0xFFFFFFFFFFFFFi64;
-	let mantissa=old_mantissa+0x10000000000000i64; // add in the implied bit
-	if negative {
-		if old_mantissa==0 {
-			if exponent<1 {
-				return PD_ZERO;
-			}
-			if exponent>EXP_MASK+1 {
-				panic!("Overflow in double_to_pseudodouble");
-			}
-			return PseudoDouble((1<<(PSEUDO_DOUBLE_TOTAL_BITS-1))+exponent-1);
-		}
-	}
-	if exponent<0 {
-		return PD_ZERO;
-	}
-	if exponent>EXP_MASK {
-		panic!("Overflow in double_to_pseudodouble");
-	}
-	let mantissa=shift_left_signed(mantissa,PSEUDO_DOUBLE_TOTAL_BITS-54);
-	//mantissa=(mantissa+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
-	if negative {
-		return PseudoDouble(-(mantissa&EXP_MASK_INV)+exponent);
-	} else {
-		return PseudoDouble((mantissa&EXP_MASK_INV)+exponent);
+		return f64::from_bits(((vx&0x3FFFFFFFFFFFFFFF)>>10) as u64+((exponent as u64)<<52)+sgn);
 	}
 }
 
@@ -460,20 +424,20 @@ impl Neg for PseudoDouble {
 		if (vx<<2)==0 {
 			let hi_byte=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-8)) as u8;
 			if hi_byte==0x80 {
-				if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
 					if expx==EXP_MASK {
 						panic!("Overflow in PseudoDouble neg");
 					}
 				}
-				return PseudoDouble((vx>>1)+expx+1);
+				return PseudoDouble(((vx as u64)>>1) as i64+expx+1);
 			}
 			if hi_byte==0x40 {
-				if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+				if cfg!(feature="check_on_pseudodouble_underflow") {
 					if expx==0 {
 						return PD_ZERO;
 					}
 				}
-				return PseudoDouble((vx>>1)+expx+1);
+				return PseudoDouble((vx<<1)+expx-1);
 			}
 		}
 		return PseudoDouble(-vx+expx as i64);
@@ -512,12 +476,12 @@ impl Add for PseudoDouble {
 				leading_bits=exp_max;
 			}
 			let new_exponent=exp_max-leading_bits;
-			if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+			if cfg!(feature="check_on_pseudodouble_underflow") {
 				if new_exponent<0 {
 					return PD_ZERO;
 				}
 			}
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if new_exponent as u32>EXP_MASK as u32 {
 					panic!("Overflow in PseudoDouble add");
 				}
@@ -559,12 +523,12 @@ impl Sub for PseudoDouble {
 				leading_bits=exp_max;
 			}
 			let new_exponent=exp_max-leading_bits;
-			if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+			if cfg!(feature="check_on_pseudodouble_underflow") {
 				if new_exponent<0 {
 					return PD_ZERO;
 				}
 			}
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if new_exponent as u32>EXP_MASK as u32 {
 					panic!("Overflow in PseudoDouble add");
 				}
@@ -587,12 +551,12 @@ impl Mul for PseudoDouble {
 		}
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i32 - 1;
 		let new_exponent=expx+expy-PSEUDO_DOUBLE_EXP_BIAS as i32-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -617,12 +581,12 @@ impl Div for PseudoDouble {
 		}
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i32 - 1;
 		let new_exponent=2+expx-expy+PSEUDO_DOUBLE_EXP_BIAS as i32-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -658,7 +622,7 @@ impl DivAssign for PseudoDouble {
 impl Ord for PseudoDouble {
     fn cmp(&self, other: &Self) -> Ordering {
 		let neg=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0;
-		if ((self.0^other.0)>>(PSEUDO_DOUBLE_TOTAL_BITS-1))==0 {
+		if ((self.0^other.0)>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0 {
 			return if neg {Ordering::Less} else {Ordering::Greater};
 		}
 		// signs are the same, check exponent
@@ -672,64 +636,114 @@ impl Ord for PseudoDouble {
     }
 }
 
-pub const fn gt_zero(x : PseudoDouble) -> bool {
-	return x.0>0;
-}
-
-pub const fn gte_zero(x : PseudoDouble) -> bool {
-	return x.0>=0;
-}
-
-pub const fn lt_zero(x : PseudoDouble) -> bool {
-	return x.0<0;
-}
-
-pub const fn lte_zero(x : PseudoDouble) -> bool {
-	return x.0<=0;
-}
-
-pub const fn pd_create_mantissa_exp10(dd: i64, ee: i32) -> PseudoDouble {
-	if dd==0 {
-		return PD_ZERO;
-	}
-	let mut d=dd;
-	let mut e=ee;
-	let negative=d<0;
-	let mut nexp=0i32;
-	while e>0 {
-		let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
-		if lead_bits<5 {
-			// check that there is no overflow
-			d>>=5-lead_bits;
-			nexp+=5-lead_bits;
-		}
-		d*=10;
-		e-=1;
-	}
-	while e<0 {
-		let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
-		if lead_bits>1 {
-			// make the number as accurate as possible
-			d<<=lead_bits-1;
-			nexp-=lead_bits-1;
-		}
-		d/=10;
-		e+=1;
-	}
-	let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
-	let exp=nexp as i64+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits as i64;
-	return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp as i64);
-}
-
-pub const fn pd_create_mantissa_exp2(d: i64, e: i32) -> PseudoDouble {
-	if d==0 {
-		return PD_ZERO;
-	}
-	let lead_bits=(if d<0 {!d} else {d}).leading_zeros() as i32;
-	return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits as i64+e as i64);
-}
+// inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
+// 	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+// 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+// 		return neg?y:x;
+// 	}
+// 	// signs are the same, check exponent
+// 	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
+// 	if(expdiff!=0) {
+// 		return ((expdiff>0)^neg)?y:x;
+// 	}
+// 	// exponents are the same so don't need to mask off, check mantissa
+// 	return (x>y)?y:x;
+// }
 
 impl PseudoDouble {
+
+	pub const fn pd_create_mantissa_exp10(dd: i64, ee: i32) -> PseudoDouble {
+		if dd==0 {
+			return PD_ZERO;
+		}
+		let mut d=dd;
+		let mut e=ee;
+		let negative=d<0;
+		let mut nexp=0i32;
+		while e>0 {
+			let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
+			if lead_bits<5 {
+				// check that there is no overflow
+				d>>=5-lead_bits;
+				nexp+=5-lead_bits;
+			}
+			d*=10;
+			e-=1;
+		}
+		while e<0 {
+			let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
+			if lead_bits>1 {
+				// make the number as accurate as possible
+				d<<=lead_bits-1;
+				nexp-=lead_bits-1;
+			}
+			d/=10;
+			e+=1;
+		}
+		let lead_bits=(if negative {!d} else {d}).leading_zeros() as i32;
+		let exp=nexp as i64+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits as i64;
+		return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp as i64);
+	}
+
+	pub const fn pd_create_mantissa_exp2(d: i64, e: i32) -> PseudoDouble {
+		if d==0 {
+			return PD_ZERO;
+		}
+		let lead_bits=(if d<0 {!d} else {d}).leading_zeros() as i32;
+		return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits as i64+e as i64);
+	}
+
+	pub const fn gt_zero(x : PseudoDouble) -> bool {
+		return x.0>0;
+	}
+
+	pub const fn gte_zero(x : PseudoDouble) -> bool {
+		return x.0>=0;
+	}
+
+	pub const fn lt_zero(x : PseudoDouble) -> bool {
+		return x.0<0;
+	}
+
+	pub const fn lte_zero(x : PseudoDouble) -> bool {
+		return x.0<=0;
+	}
+
+	pub fn double_to_pseudodouble(f:f64) -> PseudoDouble {
+		if f==0.0 {
+			return PD_ZERO;
+		}
+		let i=f64::to_bits(f) as i64;
+		let negative=i<0;
+		let raw_exponent=(((i as u64)>>52)&0x7FF) as i64;
+		let exponent=raw_exponent+PSEUDO_DOUBLE_EXP_BIAS as i64-0x3FF+2;
+		let old_mantissa=i&0xFFFFFFFFFFFFFi64;
+		let mantissa=old_mantissa+0x10000000000000i64; // add in the implied bit
+		if negative {
+			if old_mantissa==0 {
+				if exponent<1 {
+					return PD_ZERO;
+				}
+				if exponent>EXP_MASK+1 {
+					panic!("Overflow in double_to_pseudodouble");
+				}
+				return PseudoDouble((1<<(PSEUDO_DOUBLE_TOTAL_BITS-1))+exponent-1);
+			}
+		}
+		if exponent<0 {
+			return PD_ZERO;
+		}
+		if exponent>EXP_MASK {
+			panic!("Overflow in double_to_pseudodouble");
+		}
+		let mantissa=shift_left_signed(mantissa,PSEUDO_DOUBLE_TOTAL_BITS-54);
+		//mantissa=(mantissa+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
+		if negative {
+			return PseudoDouble(-(mantissa&EXP_MASK_INV)+exponent);
+		} else {
+			return PseudoDouble((mantissa&EXP_MASK_INV)+exponent);
+		}
+	}
 
 	pub const fn const_neg(self) -> Self {
 		let expx=self.0&EXP_MASK;
@@ -737,7 +751,7 @@ impl PseudoDouble {
 		if (vx<<2)==0 {
 			let hi_byte=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-8)) as u8;
 			if hi_byte==0x80 {
-				if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
 					if expx==EXP_MASK {
 						panic!("Overflow in PseudoDouble neg");
 					}
@@ -745,7 +759,7 @@ impl PseudoDouble {
 				return PseudoDouble((vx>>1)+expx+1);
 			}
 			if hi_byte==0x40 {
-				if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+				if cfg!(feature="check_on_pseudodouble_underflow") {
 					if expx==0 {
 						return PD_ZERO;
 					}
@@ -786,12 +800,12 @@ impl PseudoDouble {
 				leading_bits=exp_max;
 			}
 			let new_exponent=exp_max-leading_bits;
-			if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+			if cfg!(feature="check_on_pseudodouble_underflow") {
 				if new_exponent<0 {
 					return PD_ZERO;
 				}
 			}
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if new_exponent as u32>EXP_MASK as u32 {
 					panic!("Overflow in PseudoDouble add");
 				}
@@ -830,12 +844,12 @@ impl PseudoDouble {
 				leading_bits=exp_max;
 			}
 			let new_exponent=exp_max-leading_bits;
-			if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+			if cfg!(feature="check_on_pseudodouble_underflow") {
 				if new_exponent<0 {
 					return PD_ZERO;
 				}
 			}
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if new_exponent as u32>EXP_MASK as u32 {
 					panic!("Overflow in PseudoDouble add");
 				}
@@ -855,12 +869,12 @@ impl PseudoDouble {
 		}
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i32 - 1;
 		let new_exponent=expx+expy-PSEUDO_DOUBLE_EXP_BIAS as i32-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -882,12 +896,12 @@ impl PseudoDouble {
 		}
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i32 - 1;
 		let new_exponent=2+expx-expy+PSEUDO_DOUBLE_EXP_BIAS as i32-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -962,12 +976,12 @@ impl PseudoDouble {
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i64 - 1;
 		vr<<=leading_bits;
 		let new_exponent=exponent+1-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -994,12 +1008,12 @@ impl PseudoDouble {
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i64 - 1;
 		vr<<=leading_bits;
 		let new_exponent=exponent+1-leading_bits;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
 				panic!("Overflow in PseudoDouble add");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if new_exponent<0 {
 				return PD_ZERO;
 			}
@@ -1016,7 +1030,7 @@ impl PseudoDouble {
 		if (vx<<2)==0 {
 			let hi_byte=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-8)) as u8;
 			if hi_byte==0x80 {
-				if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
 					if expx==EXP_MASK {
 						panic!("Overflow in PseudoDouble abs");
 					}
@@ -1028,7 +1042,7 @@ impl PseudoDouble {
 	}
 
 	pub const fn inv_sqrt(self) -> PseudoDouble {
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if self.0<0 {
 				panic!("sqrt of negative number");
 			}
@@ -1048,7 +1062,7 @@ impl PseudoDouble {
 	}
 
 	pub const fn sqrt(self) -> PseudoDouble {
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if self.0<0 {
 				panic!("sqrt of negative number");
 			}
@@ -1073,12 +1087,12 @@ impl PseudoDouble {
 
 	pub const fn ldexp(self, y:i32) -> PseudoDouble {
 		let yy=y as i64;
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if (self.0&EXP_MASK)+yy>EXP_MASK {
 				panic!("Overflow in PseudoDouble ldexp");
 			}
 		}
-		if cfg!(CHECK_ON_PSEUDODOUBLE_UNDERFLOW) {
+		if cfg!(feature="check_on_pseudodouble_underflow") {
 			if (self.0&EXP_MASK)+yy<0 {
 				return PD_ZERO;
 			}
@@ -1121,7 +1135,7 @@ impl PseudoDouble {
 			if self.0<0 {
 				return PD_ZERO;
 			} else {
-				if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
 					panic!("Overflow in PseudoDouble exp");
 				} else {
 					// invalid result, but keep the compiler happy
@@ -1134,7 +1148,7 @@ impl PseudoDouble {
 		if newe<0 {
 			return PD_ZERO;
 		} else {
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if newe>EXP_MASK {
 					panic!("Overflow in PseudoDouble exp");
 				}
@@ -1144,7 +1158,7 @@ impl PseudoDouble {
 	}
 
 	pub const fn log2(self) -> PseudoDouble {
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if self.0<=0 {
 				panic!("PseudoDouble log2 of non-positive number");
 			}
@@ -1170,7 +1184,7 @@ impl PseudoDouble {
 
 	// x^y = e^ln(x)^y = 2^(y*ln2(x))
 	pub const fn pow(self, y:Self) -> Self {
-		if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if self.0<=0 {
 				panic!("PseudoDouble pow of non-positive number");
 			}
@@ -1235,7 +1249,7 @@ impl PseudoDouble {
 			if vr<0 {
 				return PD_ZERO;
 			} else {
-				if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
 					panic!("PseudoDouble overflow on pow");
 				} else {
 					// invalid result, but keep the compiler happy
@@ -1248,7 +1262,7 @@ impl PseudoDouble {
 		if newe<0 { // common to have underflow, so leave this in
 			return PD_ZERO;
 		} else {
-			if cfg!(PANIC_ON_PSEUDODOUBLE_OVERFLOW) {
+			if cfg!(feature="panic_on_pseudodouble_overflow") {
 				if newe>EXP_MASK {
 					panic!("PseudoDouble overflow on pow");
 				}
@@ -1399,11 +1413,11 @@ impl PseudoDouble {
 			if x.0>=0 {
 				return PD_ZERO;
 			} else {
-				return pd_create_mantissa_exp2(1,-1); // 1/2
+				return Self::pd_create_mantissa_exp2(1,-1); // 1/2
 			}
 		} else if y.0>0 {
 			if x.0==0 {
-				return pd_create_mantissa_exp2(1,-2); // 1/4
+				return Self::pd_create_mantissa_exp2(1,-2); // 1/4
 			} else if x.0>0 {
 				if y.const_less_than_or_equal(&x) {
 					// q1
@@ -1429,7 +1443,7 @@ impl PseudoDouble {
 		} else { // y<0
 			y=y.const_neg();
 			if x.0==0 {
-				return pd_create_mantissa_exp2(3,-2); // 3/2
+				return Self::pd_create_mantissa_exp2(3,-2); // 3/2
 			} else if x.0>0 {
 				if y.const_less_than_or_equal(&x) {
 					// q8
@@ -1498,11 +1512,4 @@ impl PseudoDouble {
 	pub const fn atan2(self, other: PseudoDouble) -> PseudoDouble {
 		self.atan2_rev(other).const_mul(PD_TAU)
 	}
-}
-
-fn main() {
-	let x=PseudoDouble::from(2);
-	let y=PseudoDouble::from(7);
-	let z=i64::from(x+y);
-	println!("z={}",z);
 }
