@@ -31,7 +31,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign, Neg, Mul, MulAssign, Div, DivAssi
 use std::cmp::{Eq, Ordering};
 use std::convert::From;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct PseudoDouble(i64);
 
 const PSEUDO_DOUBLE_TOTAL_BITS: i32 = 64;
@@ -43,7 +43,7 @@ const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
 
 pub const PD_ZERO: PseudoDouble = PseudoDouble(0);
 pub const PD_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1,0);
-pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(-11,0);
+pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(-1,0);
 pub const PD_LOG_2_E:      PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1442695040888963407,-18);
 pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(3321928094887362347,-18);
 pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(6931471805599453094,-19);
@@ -81,7 +81,8 @@ const fn divs64hi(x:i64, y:i64) -> i64 {
 const fn inv_sqrt64_fixed(x:u64) -> u64 {
 	// start with a linear interpolation correct at the endpoints
 	// 7/6 - 1/6 x, so 1->1, 4->0.5
-	let mut y=3074457345618258602u64-multu64hi(x,12297829382473034410u64);
+	//let mut y=3074457345618258602u64-multu64hi(x,12297829382473034410u64);
+	let mut y=3074457345618258602u64+(-(multu64hi(x,12297829382473034410u64) as i64) as u64);
 	// now do some Newton-Raphson
 	// y=y*(3/2-1/2*x*y*y)
 	// Maximum error for #iterations:
@@ -575,7 +576,10 @@ impl Div for PseudoDouble {
 		if vy==0 { // leave this one in to avoid division by zero signal
 			panic!("Division by zero");
 		}
-		let vr=((vx>>2) as i128/vy) as i64;
+		let vxb=((vx>>2) as i128)<<64;
+		let vyb=vy as i128;
+		let vrb=vxb/vyb;
+		let vr=vrb as i64;
 		if vr==0 {
 			return PD_ZERO;
 		}
@@ -591,7 +595,7 @@ impl Div for PseudoDouble {
 				return PD_ZERO;
 			}
 		}
-		return PseudoDouble((vr&EXP_MASK_INV)+new_exponent as i64);
+		return PseudoDouble(((vr<<leading_bits)&EXP_MASK_INV)+new_exponent as i64);
 	}
 }
 
@@ -636,19 +640,22 @@ impl Ord for PseudoDouble {
     }
 }
 
-// inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
-// 	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
-// 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
-// 		return neg?y:x;
-// 	}
-// 	// signs are the same, check exponent
-// 	int expdiff=(signed_pd_internal)((x&EXP_MASK)-(y&EXP_MASK));
-// 	if(expdiff!=0) {
-// 		return ((expdiff>0)^neg)?y:x;
-// 	}
-// 	// exponents are the same so don't need to mask off, check mantissa
-// 	return (x>y)?y:x;
-// }
+impl PartialOrd for PseudoDouble {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		let neg=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0;
+		if ((self.0^other.0)>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0 {
+			return if neg {Some(Ordering::Less)} else {Some(Ordering::Greater)};
+		}
+		// signs are the same, check exponent
+		let expdiff=(other.0&EXP_MASK)-(self.0&EXP_MASK);
+		if expdiff!=0 {
+			return  if (expdiff>0)^neg {Some(Ordering::Less)} else {Some(Ordering::Greater)};
+		} else {
+			// exponents are the same so don't need to mask off, check mantissa
+			return Some(self.0.cmp(&other.0));
+		}
+    }
+}
 
 impl PseudoDouble {
 
@@ -966,15 +973,14 @@ impl PseudoDouble {
 			if e==1 && (vx<<1)==0 { // special test for ceil(-1)=-1
 				return self;
 			}
-			return if self.0>0 {PseudoDouble(1)} else {PD_ZERO};
+			return if self.0>0 {PD_ONE} else {PD_ZERO};
 		}
 		if e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS {
 			return self;
 		}
 		let m=(1<<(PSEUDO_DOUBLE_TOTAL_BITS-e-1))-1;
-		let mut vr=((vx>>1)+m)&!m;
+		let vr=((vx>>1)+m)&!m;
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i64 - 1;
-		vr<<=leading_bits;
 		let new_exponent=exponent+1-leading_bits;
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
@@ -1004,9 +1010,8 @@ impl PseudoDouble {
 		}
 		let add=1<<(PSEUDO_DOUBLE_TOTAL_BITS-e-2);
 		let m=(add<<1)-1;
-		let mut vr=((vx>>1)+if vx>0 {add} else {add-1})&!m;
+		let vr=((vx>>1)+if vx>0 {add} else {add-1})&!m;
 		let leading_bits=(if vr>0 {vr} else {!vr}).leading_zeros() as i64 - 1;
-		vr<<=leading_bits;
 		let new_exponent=exponent+1-leading_bits;
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if new_exponent as u32>EXP_MASK as u32 {
