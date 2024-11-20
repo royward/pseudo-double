@@ -209,7 +209,24 @@ fn main() {
 				println!("cos {} {} {}",f,f.cos(),f64::from(fc));
 			}
 		}
-
+	}
+	for i in -1000i64..1000i64 {
+		let pd=PseudoDouble::from(i);
+		let ii=i64::from(pd);
+		count+=1;
+		if i!=ii {
+			failures+=1;
+			println!("i64 convert {} {}",i,ii);
+		}
+	}
+	for i in 0u64..1000u64 {
+		let pd=PseudoDouble::from(i);
+		let ii=u64::from(pd);
+		count+=1;
+		if i!=ii {
+			failures+=1;
+			println!("u64 convert {} {}",i,ii);
+		}
 	}
 	println!("Tests done, passed {}/{}",count-failures,count);
 
