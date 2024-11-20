@@ -2,7 +2,8 @@ mod pseudo_double;
 
 use pseudo_double::PseudoDouble;
 use libm::{ ldexp };
-use rand::Rng;
+use rand::{Rng,SeedableRng};
+use rand::rngs::StdRng;
 
 pub const NEAR_EXACT14: f64=0.99999999999999;
 pub const NEAR_EXACT13: f64=0.9999999999999;
@@ -37,7 +38,7 @@ fn main() {
 		list.push(f64::from(i));
 		list.push(f64::from(i)+0.5);
 	}
-	let mut rng = rand::thread_rng();
+	let mut rng = StdRng::seed_from_u64(222); // rand::thread_rng();
 	for _i in 0..100 {
 		let r:f64=rng.gen();
 		let f1=r*1000000.0;
@@ -105,6 +106,13 @@ fn main() {
 				println!("comp {}<{} {}<{}",f1,f2,f1<f2,pd1<pd2);
 				println!("{}",pd1<pd2);
 			}
+			count+=1;
+			// println!("here atan2({},{})",f1,f2);
+			let ft=pd1.atan2(pd2);
+			if( !compare(f1.atan2(f2),f64::from(ft),NEAR_EXACT8)) && ((f2/f1).abs()<1e9 || !compare(f1.atan2(f2),f64::from(ft),NEAR_EXACT3)) && (f1>=0.0 || f2!=0.0) {
+				failures+=1;
+				println!("atan2({},{}) {} {}",f1,f2,f1.atan2(f2),f64::from(ft));
+			}
 		}
 	}
 	for i in -20..20 {
@@ -162,6 +170,44 @@ fn main() {
 		if !compare(f.round(),f64::from(fr),NEAR_EXACT13) {
 			failures+=1;
 			println!("round {} {} {}",f,f.round(),f64::from(fr));
+		}
+		if f<128.0 && f>-128.0 {
+			count+=1;
+			let ff=pd.exp2();
+			if !compare(f.exp2(),f64::from(ff),NEAR_EXACT12) {
+				failures+=1;
+				println!("exp2 {} {} {}",f,f.exp2(),f64::from(ff));
+			}
+		}
+		if f<96.0 && f>-96.0 {
+			count+=1;
+			let ff=pd.exp();
+			if !compare(f.exp(),f64::from(ff),NEAR_EXACT12) {
+				failures+=1;
+				println!("exp {} {} {}",f,f.exp(),f64::from(ff));
+			}
+		}
+		if f>0.0 {
+			count+=1;
+			let ff=pd.log2();
+			if !compare(f.log2(),f64::from(ff),NEAR_EXACT12) {
+				failures+=1;
+				println!("log2 {} {} {}",f,f.log2(),f64::from(ff));
+			}
+		}
+		if -10000.0<f && f<10000.0 {
+			let fs=pd.sin();
+			count+=1;
+			if !compare(f.sin(),f64::from(fs),NEAR_EXACT9) {
+				failures+=1;
+				println!("sin {} {} {}",f,f.sin(),f64::from(fs));
+			}
+			let fc=pd.cos();
+			count+=1;
+			if !compare(f.cos(),f64::from(fc),NEAR_EXACT9) {
+				failures+=1;
+				println!("cos {} {} {}",f,f.cos(),f64::from(fc));
+			}
 		}
 
 	}

@@ -763,7 +763,7 @@ impl PseudoDouble {
 						panic!("Overflow in PseudoDouble neg");
 					}
 				}
-				return PseudoDouble((vx>>1)+expx+1);
+				return PseudoDouble(((vx as u64)>>1) as i64+expx+1);
 			}
 			if hi_byte==0x40 {
 				if cfg!(feature="check_on_pseudodouble_underflow") {
@@ -771,7 +771,7 @@ impl PseudoDouble {
 						return PD_ZERO;
 					}
 				}
-				return PseudoDouble((vx>>1)+expx+1);
+				return PseudoDouble((vx>>1)+expx-1);
 			}
 		}
 		return PseudoDouble(-vx+expx as i64);
@@ -921,7 +921,7 @@ impl PseudoDouble {
 			return true;
 		}
 		let neg=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0;
-		if ((self.0^other.0)>>(PSEUDO_DOUBLE_TOTAL_BITS-1))==0 {
+		if ((self.0^other.0)>>(PSEUDO_DOUBLE_TOTAL_BITS-1))!=0 {
 			return neg;
 		}
 		// signs are the same, check exponent
@@ -1170,8 +1170,8 @@ impl PseudoDouble {
 		}
 		let exponent=self.0&EXP_MASK;
 		let e=exponent-PSEUDO_DOUBLE_EXP_BIAS-2;
-		let mantissa=((self.0&EXP_MASK_INV)<<2)>>1;
-		let log_frac=log2_64_fixed(mantissa as u64);
+		let mantissa=((self.0&EXP_MASK_INV)<<2) as u64>>1;
+		let log_frac=log2_64_fixed(mantissa);
 		if e==0 {
 			if log_frac==0 {
 				return PD_ZERO;
@@ -1187,6 +1187,32 @@ impl PseudoDouble {
 		return PseudoDouble((((e<<(PSEUDO_DOUBLE_TOTAL_BITS+(lead_bits as i32)-65))+((log_frac as i64)>>(64-(lead_bits as i32))))&EXP_MASK_INV) as i64+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits);
 	}
 
+// pseudo_double_i pdi_log2(pseudo_double_i x) {
+// #if PD_ERROR_CHECK
+// 	if(((signed_pd_internal)x)<=0) {
+// 		PD_DO_ERROR_RANGE;
+// 	}
+// #endif
+// 	int64_t exponent=(x&EXP_MASK);
+// 	int64_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS-2;
+// 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
+// 	uint64_t log_frac=log2_64_fixed(mantissa);
+// 	if(e==0) {
+// 		if(log_frac==0) {
+// 			return 0;
+// 		}
+// 		int lead_bits=clz(log_frac);
+// 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
+// 	} else if(e==-1) {
+// 		log_frac+=0x8000000000000000ULL;
+// 		int lead_bits=clz(~log_frac);
+// 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
+// 	}
+// 	int negative=(e<0);
+// 	int lead_bits=clz(negative?~e:e);
+// 	return (((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
+// }
+
 	// x^y = e^ln(x)^y = 2^(y*ln2(x))
 	pub const fn pow(self, y:Self) -> Self {
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
@@ -1196,8 +1222,8 @@ impl PseudoDouble {
 		}
 		let exponent=self.0&EXP_MASK;
 		let e=exponent-PSEUDO_DOUBLE_EXP_BIAS-2;
-		let mantissa=((self.0&EXP_MASK_INV)<<2)>>1;
-		let mut log_frac=log2_64_fixed(mantissa as u64);
+		let mantissa=((self.0&EXP_MASK_INV)<<2) as u64>>1;
+		let mut log_frac=log2_64_fixed(mantissa);
 		let vx;
 		let expx;
 		if e==0 {
@@ -1359,10 +1385,11 @@ impl PseudoDouble {
 		if negative {
 			fraction=-fraction;
 		}
-		if (fraction>>62)!=0 {
-			fraction= -0x8000000000000000i64-fraction;
+		let mut ufraction=fraction as u64;
+		if (ufraction>>62)!=0 {
+			ufraction=0x8000000000000000u64-ufraction;
 		}
-		let mut d=sin_rev_64_fixed(fraction as u64) as i64;
+		let mut d=sin_rev_64_fixed(ufraction as u64) as i64;
 		if d==0 {
 			return PD_ZERO;
 		}
@@ -1390,15 +1417,20 @@ impl PseudoDouble {
 			let m=(1i64<<(PSEUDO_DOUBLE_TOTAL_BITS-e))-1;
 			fraction=(self.0&EXP_MASK_INV&m)<<e;
 		}
-		fraction+=0x4000000000000000i64; // _only line that is different between sin and cos
+		if fraction<0x4000000000000000i64 { // _only_ line that is different between sin and cos
+			fraction+=0x4000000000000000i64;
+		} else {
+			fraction=((fraction as u64)+0x4000000000000000u64) as i64;
+		}
 		let negative=fraction<0;
 		if negative {
 			fraction=-fraction;
 		}
-		if (fraction>>62)!=0 {
-			fraction= -0x8000000000000000i64-fraction;
+		let mut ufraction=fraction as u64;
+		if (ufraction>>62)!=0 {
+			ufraction=0x8000000000000000u64-ufraction;
 		}
-		let mut d=sin_rev_64_fixed(fraction as u64) as i64;
+		let mut d=sin_rev_64_fixed(ufraction) as i64;
 		if d==0 {
 			return PD_ZERO;
 		}
@@ -1478,9 +1510,9 @@ impl PseudoDouble {
 		let vy=y.0&EXP_MASK_INV;
 		let ratio;
 		if x.0==y.0 {
-			ratio=1i64;
+			ratio=0x4000000000000000i64;
 		} else if x.0==y.const_neg().0 {
-			ratio=-1i64;
+			ratio=-0x4000000000000000i64;
 		} else {
 			let mut vr=divs64hi(vy>>2,vx);
 			if vr==0 {
@@ -1496,14 +1528,15 @@ impl PseudoDouble {
 				}
 			}
 		}
-		let mut d=(atan_rev_64_fixed(ratio as u64)>>1) as i64;
-		d=add_const as i64+if negative {-d} else {d};
-		if d==0 {
+		let mut d=(atan_rev_64_fixed(ratio as u64)>>1) as i128;
+		d=add_const as i128+if negative {-d} else {d};
+		let d64=d as i64;
+		if d64==0 {
 			return PD_ZERO;
 		}
 		let negatived=d<0;
-		let lead_bits=(if negatived {!d} else {d}).leading_zeros() as i32;
-		return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+1-lead_bits as i64);
+		let lead_bits=(if negatived {!d64} else {d64}).leading_zeros() as i32;
+		return PseudoDouble(((shift_left_signed(d64,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+1-lead_bits as i64);
 	}
 
 	pub const fn sin(self) -> PseudoDouble {
@@ -1511,7 +1544,7 @@ impl PseudoDouble {
 	}
 
 	pub const fn cos(self) -> PseudoDouble {
-		 self.const_mul(PD_INV_TAU).sin_rev()
+		 self.const_mul(PD_INV_TAU).cos_rev()
 	}
 
 	pub const fn atan2(self, other: PseudoDouble) -> PseudoDouble {

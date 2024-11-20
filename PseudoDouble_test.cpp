@@ -91,11 +91,13 @@ bool compare(double d1, double d2, double exactness) {
 }
 
 int main() {
-	// PseudoDouble aa=0.99999999;
-	// cout << inv_sqrt(aa) << endl;
+	PseudoDouble aa=0.00000095367431640625; // 0.00000095367431640625;
+	PseudoDouble bb=-0.00000095367431640625;
+	asm("int3");
+	cout << atan2(aa,bb) << endl;
+	asm("int3");
 	// PseudoDouble bb=0.25000001;
 	// cout << inv_sqrt(bb) << endl;
-	// asm("int3");
 	uint32_t count=0;
 	uint32_t failures=0;
 	srand(0);
