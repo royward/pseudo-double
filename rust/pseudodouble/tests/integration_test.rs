@@ -1,6 +1,4 @@
-mod pseudo_double;
-
-use pseudo_double::PseudoDouble;
+use pseudodouble::PseudoDouble;
 use libm::{ ldexp };
 use rand::{Rng,SeedableRng};
 use rand::rngs::StdRng;
@@ -26,7 +24,8 @@ const fn compare(d1:f64, d2:f64, exactness:f64) -> bool {
 	}
 }
 
-fn main() {
+#[test]
+fn do_tests() {
 	let mut count=0u32;
 	let mut failures=0u32;
 	let mut list = Vec::new();
@@ -47,15 +46,8 @@ fn main() {
 		let f2=r/1000000.0;
 		list.push(f2);
 		list.push(-f2);
+        assert_eq!(1,1);
 	}
-	// {
-	// 	let f1=9.5367431640625e-07;
-	// 	let f2=5.4088650980917826e-07;
-	// 	let pd1=PseudoDouble::double_to_pseudodouble(f1);
-	// 	let pd2=PseudoDouble::double_to_pseudodouble(f2);
-	// 	let b=pd1<pd2;
-	// 	println!("compccc {}<{} {}<{}",f1,f2,f1<f2,b);
-	// }
 	for f1v in &list {
 		let f1=*f1v;
 		let pd1=PseudoDouble::double_to_pseudodouble(f1);
@@ -68,18 +60,24 @@ fn main() {
 				failures+=1;
 				println!("add {}+{}=={}!={}",f64::from(f1),f64::from(f2),f64::from(f1+f2),f64::from(ffa));
 			}
+            assert!(compare(f1+f2,ffa,NEAR_EXACT8),"add failed");
+            assert!(compare(f1+f2,f64::from(pd1.const_add(pd2)),NEAR_EXACT8),"const add failed");
 			let ffs=f64::from(pd1-pd2);
 			count+=1;
 			if !compare(f1-f2,ffs,NEAR_EXACT8) {
 				failures+=1;
 				println!("sub {}-{}=={}!={}",f64::from(f1),f64::from(f2),f64::from(f1-f2),f64::from(ffs));
 			}
+            assert!(compare(f1-f2,ffs,NEAR_EXACT8),"sub failed");
+            assert!(compare(f1-f2,f64::from(pd1.const_sub(pd2)),NEAR_EXACT8),"const sub failed");
 			let ffm=f64::from(pd1*pd2);
 			count+=1;
 			if !compare(f1*f2,ffm,NEAR_EXACT8) {
 				failures+=1;
 				println!("mul {}*{}=={}!={}",f64::from(f1),f64::from(f2),f64::from(f1*f2),f64::from(ffm));
 			}
+            assert!(compare(f1*f2,ffm,NEAR_EXACT8),"mul failed");
+            assert!(compare(f1*f2,f64::from(pd1.const_mul(pd2)),NEAR_EXACT8),"const mul failed");
 			count+=1;
 			if(PseudoDouble::max(pd1,pd2)==pd1) != (f64::max(f1,f2)==f1) {
 				failures+=1;
@@ -87,11 +85,13 @@ fn main() {
 				let t=PseudoDouble::max(pd1,pd2);
 				println!("{}",f64::from(t));
 			}
+            assert_eq!((PseudoDouble::max(pd1,pd2)==pd1),(f64::max(f1,f2)==f1),"max failed");
 			count+=1;
 			if(PseudoDouble::min(pd1,pd2)==pd1) != (f64::min(f1,f2)==f1) {
 				failures+=1;
 				println!("difference in min({},{})",f1,f2);
 			}
+            assert_eq!((PseudoDouble::max(pd1,pd2)==pd1),(f64::max(f1,f2)==f1),"min failed");
 			if f2!=0.0 {
 				let ffd=f64::from(pd1/pd2);
 				count+=1;
@@ -99,6 +99,8 @@ fn main() {
 					failures+=1;
 					println!("div {}/{}=={}!={}",f64::from(f1),f64::from(f2),f64::from(f1/f2),f64::from(ffd));
 				}
+                assert!(compare(f1/f2,ffd,NEAR_EXACT8),"div failed");
+                assert!(compare(f1/f2,f64::from(pd1.const_div(pd2)),NEAR_EXACT8),"const div failed");
 			}
 			count+=1;
 			if(f1<f2) != (pd1<pd2) {
@@ -106,6 +108,9 @@ fn main() {
 				println!("comp {}<{} {}<{}",f1,f2,f1<f2,pd1<pd2);
 				println!("{}",pd1<pd2);
 			}
+            assert_eq!((f1<f2),(pd1<pd2),"cmp failed");
+            assert_eq!(f1<=f2,pd1.const_less_than_or_equal(pd2),"const_less_than_or_equal failed");
+            assert_eq!(f1<f2,pd1.const_less_than(pd2),"const_less_than failed");
 			count+=1;
 			// println!("here atan2({},{})",f1,f2);
 			let ft=pd1.atan2(pd2);
@@ -113,6 +118,7 @@ fn main() {
 				failures+=1;
 				println!("atan2({},{}) {} {}",f1,f2,f1.atan2(f2),f64::from(ft));
 			}
+            assert!(!((!compare(f1.atan2(f2),f64::from(ft),NEAR_EXACT8)) && ((f2/f1).abs()<1e9 || !compare(f1.atan2(f2),f64::from(ft),NEAR_EXACT3)) && (f1>=0.0 || f2!=0.0)),"atan2 failed");
 			if f1>0.0 {
 				let ppf=f1.powf(f2);
 				if !ppf.is_infinite() && ppf>1.0e-35 && ppf<1.0e35 {
@@ -122,21 +128,9 @@ fn main() {
 						failures+=1;
 						println!("pow({},{}) {} {}",f1,f2,ppf,f64::from(ppd));
 					}
+                    assert!(compare(ppf,f64::from(ppd),NEAR_EXACT9),"pow failed");
 				}
 			}
-
-			// if(f1>0 && !isinf(pow(f1,f2)) && pow(f1,f2)>1e-35 && pow(f1,f2)<1e35) {
-			// 	PseudoDouble pd2=f2;
-			// 	double ff;
-			// 	ff=pow(pd1,pd2);
-			// 	count++;
-			// 	if(!compare(pow(f1,f2),ff,NEAR_EXACT9)) {
-			// 		failures++;
-			// 		cout << "pow(" << f1 << ',' << f2 << ")==" << pow(f1,f2) << "!=" << ff << endl;
-			// 	}
-			// }
-
-
 		}
 	}
 	for i in -20..20 {
@@ -152,6 +146,7 @@ fn main() {
 			failures+=1;
 			println!("conv {} {}",f,ffc);
 		}
+        assert!(compare(f,ffc,NEAR_EXACT13),"conv failed");
 		let ffn=f64::from(-pd);
 		count+=1;
 		if !compare(-f,ffn,NEAR_EXACT13) {
@@ -161,6 +156,8 @@ fn main() {
 			let tt=f64::from(t);
 			println!("{}",tt)
 		}
+        assert!(compare(-f,ffn,NEAR_EXACT13),"neg failed");
+        assert!(compare(-f,f64::from(pd.const_neg()),NEAR_EXACT13),"const neg failed");
 		if f>0.0 {
 			count+=1;
 			let ff=pd.inv_sqrt();
@@ -168,6 +165,7 @@ fn main() {
 				failures+=1;
 				println!("inv_sqrt {} {}",1.0/f.sqrt(),f64::from(ff));
 			}
+            assert!(compare(1.0/f.sqrt(),f64::from(ff),NEAR_EXACT13),"inv_sqrt failed");
 		}
 		if f>0.0 {
 			count+=1;
@@ -176,6 +174,7 @@ fn main() {
 				failures+=1;
 				println!("sqrt {} {}",f.sqrt(),f64::from(ff));
 			}
+            assert!(compare(f.sqrt(),f64::from(ff),NEAR_EXACT13),"sqrt failed");
 		}
 		let ff=pd.floor();
 		count+=1;
@@ -183,18 +182,21 @@ fn main() {
 			failures+=1;
 			println!("floor {} {} {}",f,f.floor(),f64::from(ff));
 		}
+        assert!(compare(f.floor(),f64::from(ff),NEAR_EXACT13),"floor failed");
 		let fc=pd.ceil();
 		count+=1;
 		if !compare(f.ceil(),f64::from(fc),NEAR_EXACT13) {
 			failures+=1;
 			println!("ceil {} {} {}",f,f.ceil(),f64::from(fc));
 		}
+        assert!(compare(f.ceil(),f64::from(fc),NEAR_EXACT13),"ceil failed");
 		let fr=pd.round();
 		count+=1;
 		if !compare(f.round(),f64::from(fr),NEAR_EXACT13) {
 			failures+=1;
 			println!("round {} {} {}",f,f.round(),f64::from(fr));
 		}
+        assert!(compare(f.round(),f64::from(fr),NEAR_EXACT13),"ceil failed");
 		if f<128.0 && f>-128.0 {
 			count+=1;
 			let ff=pd.exp2();
@@ -202,6 +204,7 @@ fn main() {
 				failures+=1;
 				println!("exp2 {} {} {}",f,f.exp2(),f64::from(ff));
 			}
+            assert!(compare(f.exp2(),f64::from(ff),NEAR_EXACT12),"exp2 failed");
 		}
 		if f<96.0 && f>-96.0 {
 			count+=1;
@@ -210,14 +213,16 @@ fn main() {
 				failures+=1;
 				println!("exp {} {} {}",f,f.exp(),f64::from(ff));
 			}
+            assert!(compare(f.exp(),f64::from(ff),NEAR_EXACT12),"exp failed");
 		}
 		if f>0.0 {
 			count+=1;
 			let ff=pd.log2();
-			if !compare(f.log2(),f64::from(ff),NEAR_EXACT12) {
+ 			if !compare(f.log2(),f64::from(ff),NEAR_EXACT12) {
 				failures+=1;
 				println!("log2 {} {} {}",f,f.log2(),f64::from(ff));
 			}
+            assert!(compare(f.log2(),f64::from(ff),NEAR_EXACT12),"log2 failed");
 		}
 		if -10000.0<f && f<10000.0 {
 			let fs=pd.sin();
@@ -226,12 +231,14 @@ fn main() {
 				failures+=1;
 				println!("sin {} {} {}",f,f.sin(),f64::from(fs));
 			}
+            assert!(compare(f.sin(),f64::from(fs),NEAR_EXACT9),"sin failed");
 			let fc=pd.cos();
 			count+=1;
 			if !compare(f.cos(),f64::from(fc),NEAR_EXACT9) {
 				failures+=1;
 				println!("cos {} {} {}",f,f.cos(),f64::from(fc));
 			}
+            assert!(compare(f.cos(),f64::from(fc),NEAR_EXACT9),"cos failed");
 		}
 	}
 	for i in -1000i64..1000i64 {
@@ -242,6 +249,7 @@ fn main() {
 			failures+=1;
 			println!("i64 convert {} {}",i,ii);
 		}
+        assert_eq!(i,ii,"i64 convert failed");
 	}
 	for i in 0u64..1000u64 {
 		let pd=PseudoDouble::from(i);
@@ -251,12 +259,8 @@ fn main() {
 			failures+=1;
 			println!("u64 convert {} {}",i,ii);
 		}
+        assert_eq!(i,ii,"u64 convert failed");
 	}
 	println!("Tests done, passed {}/{}",count-failures,count);
-
-	let x=PseudoDouble::from(2);
-	let y=PseudoDouble::from(7);
-	let z=i64::from(x+y);
-	println!("z={}",z);
 }
 

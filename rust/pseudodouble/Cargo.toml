@@ -1,0 +1,15 @@
+[package]
+name = "pseudodouble"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dev-dependencies]
+libm = "0.2.11"
+rand = "0.8.5"
+
+[features]
+check_on_pseudodouble_underflow=[]
+panic_on_pseudodouble_overflow=[]
+default=["panic_on_pseudodouble_overflow"]

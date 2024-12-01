@@ -1,21 +1,21 @@
 // BSD 3-Clause License
-// 
+//
 // Copyright (c) 2023, Roy Ward
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
+//
 // 1. Redistributions of source code must retain the above copyright notice, this
 //    list of conditions and the following disclaimer.
-// 
+//
 // 2. Redistributions in binary form must reproduce the above copyright notice,
 //    this list of conditions and the following disclaimer in the documentation
 //    and/or other materials provided with the distribution.
-// 
+//
 // 3. Neither the name of the copyright holder nor the names of its
 //    contributors may be used to endorse or promote products derived from
 //    this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,7 +32,7 @@ use std::cmp::{Eq, Ordering};
 use std::convert::From;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct PseudoDouble(i64);
+pub struct PseudoDouble(pub i64);
 
 const PSEUDO_DOUBLE_TOTAL_BITS: i32 = 64;
 const PSEUDO_DOUBLE_EXP_BITS: i32 = 16;
@@ -42,14 +42,14 @@ const PSEUDO_DOUBLE_HALF_ULP: i64 = (1<<(PSEUDO_DOUBLE_EXP_BITS-1))-1;
 const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
 
 pub const PD_ZERO: PseudoDouble = PseudoDouble(0);
-pub const PD_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1,0);
-pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(-1,0);
-pub const PD_LOG_2_E:      PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1442695040888963407,-18);
-pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(3321928094887362347,-18);
-pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(6931471805599453094,-19);
-pub const PD_INV_LOG_2_10: PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(3010299956639811952,-19);
-pub const PD_TAU:          PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(6283185307179586477,-18);
-pub const PD_INV_TAU:      PseudoDouble = PseudoDouble::pd_create_mantissa_exp10(1591549430918953358,-19);
+pub const PD_ONE: PseudoDouble = PseudoDouble::pdc10(1,0);
+pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pdc10(-1,0);
+pub const PD_LOG_2_E:      PseudoDouble = PseudoDouble::pdc10(1442695040888963407,-18);
+pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pdc10(3321928094887362347,-18);
+pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pdc10(6931471805599453094,-19);
+pub const PD_INV_LOG_2_10: PseudoDouble = PseudoDouble::pdc10(3010299956639811952,-19);
+pub const PD_TAU:          PseudoDouble = PseudoDouble::pdc10(6283185307179586477,-18);
+pub const PD_INV_TAU:      PseudoDouble = PseudoDouble::pdc10(1591549430918953358,-19);
 
 #[inline]
 const fn shift_left_signed(x:i64, shift:i32) -> i64 {
@@ -539,7 +539,7 @@ impl Sub for PseudoDouble {
 	}
 }
 
-const impl Mul for PseudoDouble {
+impl Mul for PseudoDouble {
     type Output = Self;
 	fn mul(self, other: Self) -> Self {
 		let expx=(self.0&EXP_MASK) as i32;
@@ -566,7 +566,7 @@ const impl Mul for PseudoDouble {
 	}
 }
 
-const impl Div for PseudoDouble {
+impl Div for PseudoDouble {
     type Output = Self;
 	fn div(self, other: Self) -> Self {
 		let expx=(self.0&EXP_MASK) as i32;
@@ -657,9 +657,12 @@ impl PartialOrd for PseudoDouble {
     }
 }
 
+impl Default for PseudoDouble {
+	fn default() -> Self { PD_ZERO }
+}
 impl PseudoDouble {
 
-	pub const fn pd_create_mantissa_exp10(dd: i64, ee: i32) -> PseudoDouble {
+	pub const fn pdc10(dd: i64, ee: i32) -> PseudoDouble {
 		if dd==0 {
 			return PD_ZERO;
 		}
@@ -771,7 +774,7 @@ impl PseudoDouble {
 						return PD_ZERO;
 					}
 				}
-				return PseudoDouble((vx>>1)+expx-1);
+				return PseudoDouble((vx<<1)+expx-1);
 			}
 		}
 		return PseudoDouble(-vx+expx as i64);
@@ -897,7 +900,10 @@ impl PseudoDouble {
 		if vy==0 { // leave this one in to avoid division by zero signal
 			panic!("Division by zero");
 		}
-		let vr=((vx>>2) as i128/vy) as i64;
+		let vxb=((vx>>2) as i128)<<64;
+		let vyb=vy as i128;
+		let vrb=vxb/vyb;
+		let vr=vrb as i64;
 		if vr==0 {
 			return PD_ZERO;
 		}
@@ -913,10 +919,10 @@ impl PseudoDouble {
 				return PD_ZERO;
 			}
 		}
-		return PseudoDouble((vr&EXP_MASK_INV)+new_exponent as i64);
+		return PseudoDouble(((vr<<leading_bits)&EXP_MASK_INV)+new_exponent as i64);
 	}
 
-    pub const fn const_less_than_or_equal(&self, other: &Self) -> bool {
+	pub const fn const_less_than_or_equal(&self, other: Self) -> bool {
 		if self.0==other.0 {
 			return true;
 		}
@@ -934,7 +940,7 @@ impl PseudoDouble {
 		}
     }
 
-    pub const fn const_less_than(&self, other: &Self) -> bool {
+    pub const fn const_less_than(&self, other: Self) -> bool {
 		if self.0==other.0 {
 			return false;
 		}
@@ -1187,32 +1193,6 @@ impl PseudoDouble {
 		return PseudoDouble((((e<<(PSEUDO_DOUBLE_TOTAL_BITS+(lead_bits as i32)-65))+((log_frac as i64)>>(64-(lead_bits as i32))))&EXP_MASK_INV) as i64+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits);
 	}
 
-// pseudo_double_i pdi_log2(pseudo_double_i x) {
-// #if PD_ERROR_CHECK
-// 	if(((signed_pd_internal)x)<=0) {
-// 		PD_DO_ERROR_RANGE;
-// 	}
-// #endif
-// 	int64_t exponent=(x&EXP_MASK);
-// 	int64_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS-2;
-// 	uint64_t mantissa=((x&EXP_MASK_INV)<<2)>>1;
-// 	uint64_t log_frac=log2_64_fixed(mantissa);
-// 	if(e==0) {
-// 		if(log_frac==0) {
-// 			return 0;
-// 		}
-// 		int lead_bits=clz(log_frac);
-// 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
-// 	} else if(e==-1) {
-// 		log_frac+=0x8000000000000000ULL;
-// 		int lead_bits=clz(~log_frac);
-// 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
-// 	}
-// 	int negative=(e<0);
-// 	int lead_bits=clz(negative?~e:e);
-// 	return (((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
-// }
-
 	// x^y = e^ln(x)^y = 2^(y*ln2(x))
 	pub const fn powf(self, y:Self) -> Self {
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
@@ -1456,7 +1436,7 @@ impl PseudoDouble {
 			if x.0==0 {
 				return Self::pd_create_mantissa_exp2(1,-2); // 1/4
 			} else if x.0>0 {
-				if y.const_less_than_or_equal(&x) {
+				if y.const_less_than_or_equal(x) {
 					// q1
 					add_const=0;
 				} else {
@@ -1467,7 +1447,7 @@ impl PseudoDouble {
 				}
 			} else { // x<0
 				x=x.const_neg();
-				if y.const_less_than_or_equal(&x) {
+				if y.const_less_than_or_equal(x) {
 					// q4
 					add_const=0x8000000000000000u64;
 					negative=true;
@@ -1482,7 +1462,7 @@ impl PseudoDouble {
 			if x.0==0 {
 				return Self::pd_create_mantissa_exp2(3,-2); // 3/2
 			} else if x.0>0 {
-				if y.const_less_than_or_equal(&x) {
+				if y.const_less_than_or_equal(x) {
 					// q8
 					add_const=0; // boolean
 					negative=true;
@@ -1493,7 +1473,7 @@ impl PseudoDouble {
 				}
 			} else { // x<0
 				x=x.const_neg();
-				if y.const_less_than_or_equal(&x) {
+				if y.const_less_than_or_equal(x) {
 					// q5
 					add_const=0x8000000000000000u64;
 				} else {
