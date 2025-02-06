@@ -371,6 +371,9 @@ inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 }
 
 inline pseudo_double_i pdi_ldexp(pseudo_double_i x, int y) {
+	if(x==0) {
+		return 0;
+	}
 #if PD_ERROR_CHECK
 	int32_t expx=x&EXP_MASK;
 	if(expx+y>(int32_t)EXP_MASK) {

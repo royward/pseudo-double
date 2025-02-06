@@ -49,6 +49,7 @@ pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pdc10(332192809488736234
 pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pdc10(6931471805599453094,-19);
 pub const PD_INV_LOG_2_10: PseudoDouble = PseudoDouble::pdc10(3010299956639811952,-19);
 pub const PD_TAU:          PseudoDouble = PseudoDouble::pdc10(6283185307179586477,-18);
+pub const PD_PI:           PseudoDouble = PD_TAU.ldexp(-1);
 pub const PD_INV_TAU:      PseudoDouble = PseudoDouble::pdc10(1591549430918953358,-19);
 
 #[inline]
@@ -342,6 +343,39 @@ impl From<PseudoDouble> for f64 {
 			return f64::NAN;
 		}
 		return f64::from_bits(((vx&0x3FFFFFFFFFFFFFFF)>>10) as u64+((exponent as u64)<<52)+sgn);
+	}
+}
+
+impl From<PseudoDouble> for f32 {
+    fn from(x: PseudoDouble) -> Self {
+		if x.0==0 {
+			return 0.0;
+		}
+		let mut vx=x.0&EXP_MASK_INV;
+		let sgn;
+		let exponent=((x.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS+0x7F-2) as i32;
+		if vx<0 {
+			sgn=0x80000000u32;
+			if vx==(1<<(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+				if exponent< -1 {
+					return 0.0;
+				}
+				if exponent>=0xFF {
+					return f32::NAN;
+				}
+				return f32::from_bits((((exponent+1) as u32)<<23)+sgn);
+			}
+			vx=-vx;
+		} else {
+			sgn=0;
+		}
+		if exponent<0 {
+			return 0.0;
+		}
+		if exponent>0xFF {
+			return f32::NAN;
+		}
+		return f32::from_bits((((vx&0x3FFFFFFFFFFFFFFF)+0x4000000000)>>(32+7)) as u32+((exponent as u32)<<23)+sgn);
 	}
 }
 
@@ -695,7 +729,7 @@ impl PseudoDouble {
 		return PseudoDouble(((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp as i64);
 	}
 
-	pub const fn pd_create_mantissa_exp2(d: i64, e: i32) -> PseudoDouble {
+	pub const fn pdc2(d: i64, e: i32) -> PseudoDouble {
 		if d==0 {
 			return PD_ZERO;
 		}
@@ -719,7 +753,7 @@ impl PseudoDouble {
 		return x.0<=0;
 	}
 
-	pub fn double_to_pseudodouble(f:f64) -> PseudoDouble {
+	pub fn double_to_pseudodouble_unsafe(f:f64) -> PseudoDouble {
 		if f==0.0 {
 			return PD_ZERO;
 		}
@@ -1097,16 +1131,17 @@ impl PseudoDouble {
 	}
 
 	pub const fn ldexp(self, y:i32) -> PseudoDouble {
+		if self.0==0 {
+			return self;
+		}
 		let yy=y as i64;
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
 			if (self.0&EXP_MASK)+yy>EXP_MASK {
 				panic!("Overflow in PseudoDouble ldexp");
 			}
 		}
-		if cfg!(feature="check_on_pseudodouble_underflow") {
-			if (self.0&EXP_MASK)+yy<0 {
-				return PD_ZERO;
-			}
+		if (self.0&EXP_MASK)+yy<0 {
+			return PD_ZERO;
 		}
 		return PseudoDouble(self.0+yy);
 	}
@@ -1362,7 +1397,7 @@ impl PseudoDouble {
 			fraction=(self.0&EXP_MASK_INV&m)<<e;
 		}
 		let negative=fraction<0;
-		if negative {
+		if negative && (fraction<<1)!=0 {
 			fraction=-fraction;
 		}
 		let mut ufraction=fraction as u64;
@@ -1430,11 +1465,11 @@ impl PseudoDouble {
 			if x.0>=0 {
 				return PD_ZERO;
 			} else {
-				return Self::pd_create_mantissa_exp2(1,-1); // 1/2
+				return Self::pdc2(1,-1); // 1/2
 			}
 		} else if y.0>0 {
 			if x.0==0 {
-				return Self::pd_create_mantissa_exp2(1,-2); // 1/4
+				return Self::pdc2(1,-2); // 1/4
 			} else if x.0>0 {
 				if y.const_less_than_or_equal(x) {
 					// q1
@@ -1460,7 +1495,7 @@ impl PseudoDouble {
 		} else { // y<0
 			y=y.const_neg();
 			if x.0==0 {
-				return Self::pd_create_mantissa_exp2(3,-2); // 3/2
+				return Self::pdc2(3,-2); // 3/2
 			} else if x.0>0 {
 				if y.const_less_than_or_equal(x) {
 					// q8

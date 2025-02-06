@@ -50,10 +50,10 @@ fn do_tests() {
 	}
 	for f1v in &list {
 		let f1=*f1v;
-		let pd1=PseudoDouble::double_to_pseudodouble(f1);
+		let pd1=PseudoDouble::double_to_pseudodouble_unsafe(f1);
 		for f2v in &list {
 			let f2=*f2v;
-			let pd2=PseudoDouble::double_to_pseudodouble(f2);
+			let pd2=PseudoDouble::double_to_pseudodouble_unsafe(f2);
 			let ffa=f64::from(pd1+pd2);
 			count+=1;
 			if !compare(f1+f2,ffa,NEAR_EXACT8) {
@@ -139,14 +139,16 @@ fn do_tests() {
 	}
 	for fv in &list {
 		let f=*fv;
-		let pd=PseudoDouble::double_to_pseudodouble(f);
+		let pd=PseudoDouble::double_to_pseudodouble_unsafe(f);
 		let ffc=f64::from(pd);
+        let ffc32=f32::from(pd);
 		count+=1;
 		if !compare(f,ffc,NEAR_EXACT13) {
 			failures+=1;
 			println!("conv {} {}",f,ffc);
 		}
         assert!(compare(f,ffc,NEAR_EXACT13),"conv failed");
+		assert_eq!(ffc as f32,ffc32,"conv32 failed");
 		let ffn=f64::from(-pd);
 		count+=1;
 		if !compare(-f,ffn,NEAR_EXACT13) {
