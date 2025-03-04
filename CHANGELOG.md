@@ -1,5 +1,11 @@
 # Change Log
 
+# 1.1.0 - 2024-03-03
+
+* Fixes to ldexp(0,n)
+* Fix for int64fixed10_to_pdi / int64fixed10_to_pd / PD_create_fixed10 for negative numbers
+* NEW: Rust binding
+
 # 1.0.6 - 2024-03-24
 
 * Added a namespace 'pseudodouble' for the C++ version
