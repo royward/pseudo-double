@@ -10,7 +10,7 @@ https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-pro
 
 There are many libraries that exist to provide floating point functionality on integer processors. They all (that I have found) follow the IEEE 754 standard at least in part, and the vast majority of them are only single precision. The pseudo-double library does not follow IEEE 754 standard at all, and instead has design choices more suited to a software implementation. This results in a library that (on x86-64) runs 4-15 times slower than the hardware floating point. I have not measured it against other soft floating point implementations - I leave that as an exercise for the reader.
 
-This library has both C and C++ bindings, and it has been tested on x86-64 with gcc/g++/clang, ARMv8-A with clang and x86-64 with Visual C++.
+This library has both C, C++ and Rust bindings, and it has been tested on x86-64 with gcc/g++/clang, ARMv8-A with clang and x86-64 with Visual C++.
 
 It also allows the number of expononent bits to be set with a macro, which enables choices to be made in the range/precision tradeoff.
 
@@ -19,6 +19,8 @@ It also allows the number of expononent bits to be set with a macro, which enabl
 The main use cases for this code are:
 
 * Something where cross-platform consistency is important and there is too much dynamic range required to use fixed point.
+
+* Applications where it is important to have the same results from some combination from C, C++ or Rust.
 
 * Applications where a range/precision tradeoff different than the IEEE 754 one is useful setting (see PSEUDO_DOUBLE_EXP_BITS below).
 
