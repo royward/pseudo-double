@@ -4,7 +4,7 @@ A relatively fast C, C++ and Rust 64 bit floating point library written using on
 
 # Overview
 
-This is a partial floating point library that only uses integer CPU instructions (no floating point) and is designed to provide consistent cross platform results in cases where fixed point does not have enough dynamic range. Exact consistency across platforms is particularly important for procedural generation or other very ill conditioned systems where a tiny change in the input or calculation can produce an enormous change in the outputs. It was inspired by this post:
+This is a partial floating point library that only uses integer CPU instructions (no floating point) and is designed to provide consistent cross platform results in cases where fixed point does not have enough dynamic range. It will also return the same results for C, C++ or Rust. Exact consistency across platforms is particularly important for procedural generation or other very ill conditioned systems where a tiny change in the input or calculation can produce an enormous change in the outputs. It was inspired by this post:
 
 https://gamedev.stackexchange.com/questions/202475/consistent-cross-platform-procedural-generation
 
@@ -127,7 +127,7 @@ Here we get to make good use of operator and function overloading.
 
 ### C with pseudo_double_i (type unsafe)
 
-Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage. Not recommended.
+Here we don't use the pseudo_double struct but use the pseudo_double_i instead. It is very easy to accidentally use direct integer operations and get garbage. Not recommended unless it is carefully wrapped in other code.
 
 	pseudo_double_i a=int64fixed10_to_pdi(3,-1); // 0.3
 	pseudo_double_i b=int64_to_pdi(-4);
@@ -138,21 +138,52 @@ Here we don't use the pseudo_double struct but use the pseudo_double_i instead. 
 	printf("C (unsafe): Solution 1 = %lf\n",pdi_to_double(sol1));
 	printf("C (unsafe): Solution 2 = %lf\n",pdi_to_double(sol2));
 
+### Rust
+
+	let a=PseudoDouble::pdc10(3,-1); // 0.3
+	let b=PseudoDouble::from(-4);
+	let c=PseudoDouble::from(6);
+	let disc=(b*b-PseudoDouble::from(4)*a*c).sqrt();
+	let sol1=(-b-disc)/(PseudoDouble::from(2)*a);
+	let sol2=(-b+disc)/(PseudoDouble::from(2)*a);
+	println!("Rust: Solution 1 = {}",f64::from(sol1));
+	println!("Rust: Solution 2 = {}",f64::from(sol2));
+
 ## Running the tests
+
+### C++
 
 To built the library test:
 
 	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_double_test pseudo_double.cpp PseudoDouble_test.cpp
 
-When the generated executable is run, it will print out a line for any failed tests, followed by a count of tests passed/done:
+When the generated executable is run, it will print out a line for any failed tests, followed by a count of tests passed/done, followed by the results of the above example code:
 
 	./pseudo_double_test 
 	Tests done, passed 4651204/4651204
+	C: Solution 1 = 1.722534
+	C: Solution 2 = 11.610799
+	C++: Solution 1 = 1.72253
+	C++: Solution 2 = 11.6108
+	C: Solution 1 = 1.722534
+	C: Solution 2 = 11.610799
+	C (unsafe): Solution 1 = 1.722534
+	C (unsafe): Solution 2 = 11.610799
 
 Similarly, the speed tests can be built using:
 
 	g++ -Wall -Wextra ${ANY_OTHER_FLAGS} -o pseudo_double_speed_test pseudo_double.cpp PseudoDouble_speed_test.cpp
 
+### Rust
+
+In the **pseudodouble** directory do:
+	
+ 	cargo test
+
+or of you want to capture the number of tests:
+
+	cargo test -- --nocapture
+ 
 # Funtions supported
 
 See Functions.md for details of all the provided functions.
@@ -223,17 +254,33 @@ There are more details in Functions.md .
 	PseudoDouble cos_rev(const PseudoDouble x);
 	PseudoDouble atan2_rev(const PseudoDouble y, const PseudoDouble x);
 
+### Rust:
+
+	pub const fn sin_rev(self) -> PseudoDouble
+	pub const fn cos_rev(self) -> PseudoDouble
+ 	pub const fn atan2_rev(self, other: PseudoDouble) -> PseudoDouble
+
 # Extra: Fixed integer helper functions
 
 Some fixed integer functions used by this library have been exposed as they may be useful elsewhere.
 
 They are documented in the last section of Functions.md and do not depend on any other features of pseudo-double. They give about 48 bits of accuracy.
 
+### C/C++
+
 	uint64_t inv_sqrt64_fixed(uint64_t x);
 	uint64_t exp2_64_fixed(uint64_t x);
 	uint64_t log2_64_fixed(uint64_t x);
 	uint64_t sin_rev_64_fixed(uint64_t x);
 	uint64_t atan_rev_64_fixed(uint64_t x);
+
+ ### Rust
+
+ 	const fn inv_sqrt64_fixed(x:u64) -> u64
+ 	const fn exp2_64_fixed(x:u64) -> u64
+	const fn log2_64_fixed(xu:u64) -> u64
+	const fn sin_rev_64_fixed(xu:u64) -> u64
+	const fn atan_rev_64_fixed(xu:u64) -> u64
 
 # Design Considerations
 
