@@ -62,6 +62,14 @@ PseudoDouble is provided as a class with operator overloading and function overl
 
 This is set up as a crate that can be used by other projects.
 
+To use in a project, add the following to the project's **Cargo.toml** file:
+
+	pseudodouble = {path="<parent directory>/pseudodouble"}
+
+then add the following to any files that need it:
+
+	use pseudodouble::{PseudoDouble, PD_ONE, PD_ZERO, PD_PI};
+
 ### Files
 
 **rust/pseudodouble/src/lib.rs**: the pseudo-double library
