@@ -1549,7 +1549,7 @@ impl PseudoDouble {
 		if d64==0 {
 			return PD_ZERO;
 		}
-		let negatived=d<0;
+		let negatived=d64<0;
 		let lead_bits=(if negatived {!d64} else {d64}).leading_zeros() as i32;
 		return PseudoDouble(((shift_left_signed(d64,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+1-lead_bits as i64);
 	}
