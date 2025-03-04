@@ -1,6 +1,6 @@
 # pseudo-double
 
-A relatively fast C and C++ 64 bit floating point library written using only integer operations for cross platform consistency.
+A relatively fast C, C++ and Rust 64 bit floating point library written using only integer operations for cross platform consistency.
 
 # Overview
 
@@ -57,6 +57,18 @@ PseudoDouble is provided as a class with operator overloading and function overl
 **PseudoDouble_test.cpp**: a test for the rest of the library.
 
 **PseudoDouble_speed_test.cpp**: a simple speed test. 10x10 matrix inversion plus some short loop tests.
+
+## Rust
+
+This is set up as a crate that can be used by other projects.
+
+### Files
+
+**rust/pseudodouble/src/lib.rs**: the pseudo-double library
+
+**rust/pseudodouble/tests/integration_test.rs**: integration tests
+
+**pseudo-double/rust/pseudodouble/Cargo.toml**: the .toml file
 
 ## Example code
 
