@@ -264,5 +264,13 @@ fn do_tests() {
         assert_eq!(i,ii,"u64 convert failed");
 	}
 	println!("Tests done, passed {}/{}",count-failures,count);
+	let a=PseudoDouble::pdc10(3,-1); // 0.3
+	let b=PseudoDouble::from(-4);
+	let c=PseudoDouble::from(6);
+	let disc=(b*b-PseudoDouble::from(4)*a*c).sqrt();
+	let sol1=(-b-disc)/(PseudoDouble::from(2)*a);
+	let sol2=(-b+disc)/(PseudoDouble::from(2)*a);
+	println!("Rust: Solution 1 = {}",f64::from(sol1));
+	println!("Rust: Solution 2 = {}",f64::from(sol2));
 }
 
