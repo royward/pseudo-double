@@ -14,7 +14,8 @@ As the changes are all bug fixes or other improvements, there is no known reason
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0.6   | :white_check_mark: |
+| 1.1.0   | :white_check_mark: |
+| 1.0.6   | :x:                |
 | 1.0.5   | :x:                |
 | 1.0.4   | :x:                |
 | 1.0.3   | :x:                |
