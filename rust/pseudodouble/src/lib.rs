@@ -33,8 +33,8 @@ use std::ops::{Add, AddAssign, Sub, SubAssign, Neg, Mul, MulAssign, Div, DivAssi
 use std::cmp::{Eq, Ordering};
 use approx::{UlpsEq, AbsDiffEq, RelativeEq};
 use std::convert::From;
-use num_traits::{Bounded,Signed,Num,Zero,One,FromPrimitive,ParseFloatError};
-use std::fmt::{Display,Formatter,Result};
+use num_traits::{Bounded,Signed,Num,Zero,One,FromPrimitive};
+use std::fmt::{Display,Formatter};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct PseudoDouble(pub i64);
@@ -46,9 +46,9 @@ const EXP_MASK_INV: i64 = !EXP_MASK as i64;
 const PSEUDO_DOUBLE_HALF_ULP: i64 = (1<<(PSEUDO_DOUBLE_EXP_BITS-1))-1;
 const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
 
-pub const PD_ZERO: PseudoDouble = PseudoDouble(0);
-pub const PD_ONE: PseudoDouble = PseudoDouble::pdc10(1,0);
-pub const PD_NEG_ONE: PseudoDouble = PseudoDouble::pdc10(-1,0);
+pub const PD_ZERO:         PseudoDouble = PseudoDouble(0);
+pub const PD_ONE:          PseudoDouble = PseudoDouble::pdc10(1,0);
+pub const PD_NEG_ONE:      PseudoDouble = PseudoDouble::pdc10(-1,0);
 pub const PD_LOG_2_E:      PseudoDouble = PseudoDouble::pdc10(1442695040888963407,-18);
 pub const PD_LOG_2_10:     PseudoDouble = PseudoDouble::pdc10(3321928094887362347,-18);
 pub const PD_INV_LOG_2_E:  PseudoDouble = PseudoDouble::pdc10(6931471805599453094,-19);
@@ -56,6 +56,7 @@ pub const PD_INV_LOG_2_10: PseudoDouble = PseudoDouble::pdc10(301029995663981195
 pub const PD_TAU:          PseudoDouble = PseudoDouble::pdc10(6283185307179586477,-18);
 pub const PD_PI:           PseudoDouble = PD_TAU.ldexp(-1);
 pub const PD_INV_TAU:      PseudoDouble = PseudoDouble::pdc10(1591549430918953358,-19);
+pub const PD_EPSILON:      PseudoDouble = PseudoDouble((1i64<<(PSEUDO_DOUBLE_TOTAL_BITS-2))+(1i64<<(PSEUDO_DOUBLE_EXP_BITS-1))+(PSEUDO_DOUBLE_EXP_BITS-PSEUDO_DOUBLE_TOTAL_BITS+4) as i64);
 
 #[inline]
 const fn shift_left_signed(x:i64, shift:i32) -> i64 {
@@ -764,21 +765,25 @@ impl Bounded for PseudoDouble {
     }
 }
 
+fn simulated_parse_error() -> std::num::ParseFloatError {
+    "NaNxyz".parse::<f64>().unwrap_err()
+}
+
 impl Num for PseudoDouble {
 
-	// type FromStrRadixErr = ParseFloatError;
- //
- //    fn from_str_radix(str: &str, radix: u32) -> Result<PseudoDouble, num_traits::ParseFloatError> {
- //        // For floating point, radix != 10 isn't usually supported
- //        if radix != 10 {
- //            "NaN".parse::<f64>().map(PseudoDouble);
- //        }
-	// 	let result=string_to_pd(str);
-	// 	match result {
-	// 		Some(x) => { x }
-	// 		None    => { "NaN".parse::<f64>().map(PseudoDouble) }
-	// 	}
-    //}
+	type FromStrRadixErr = std::num::ParseFloatError;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<PseudoDouble, std::num::ParseFloatError> {
+        // For floating point, radix != 10 isn't usually supported
+        if radix != 10 {
+			return Err(simulated_parse_error())
+        }
+		let result=PseudoDouble::string_to_pd(str);
+		match result {
+			Some(x) => { return Ok(x) }
+			None    => { return Err(simulated_parse_error()) }
+		}
+    }
 }
 
 impl Signed for PseudoDouble {
@@ -840,35 +845,68 @@ impl RemAssign for PseudoDouble {
     }
 }
 
-// TODO: implement the next three impls
-
 impl AbsDiffEq for PseudoDouble {
 
 	type Epsilon = PseudoDouble;
 
-	fn default_epsilon() -> Self::Epsilon {return PD_ZERO;}
+	fn default_epsilon() -> Self::Epsilon {return PD_EPSILON;}
 
-	fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {return true;}
+	fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
+		(*self-*other).abs()<=epsilon
+	}
 }
 
 impl RelativeEq for PseudoDouble {
 
-	fn default_max_relative() -> Self::Epsilon  {return PD_ZERO;}
+	fn default_max_relative() -> Self::Epsilon {return PD_EPSILON;}
 
 	fn relative_eq(
-        &self,
-        other: &Self,
-        epsilon: Self::Epsilon,
-        max_relative: Self::Epsilon,
-    ) -> bool {return true;}
+		&self,
+		other: &Self,
+		epsilon: Self::Epsilon,
+		max_relative: Self::Epsilon,
+    ) -> bool {
+		if *self==*other {
+			return true;
+		}
+		let abs_diff=(*self-*other).abs();
+		if abs_diff<=epsilon {
+			return true;
+		}
+		let abs_self = (*self).abs();
+		let abs_other = (*other).abs();
 
+		let largest = if abs_other > abs_self {
+			abs_other
+		} else {
+			abs_self
+		};
+		// Use a relative difference comparison
+		abs_diff <= largest * max_relative
+	}
 }
 
 impl UlpsEq for PseudoDouble {
 
 	fn default_max_ulps() -> u32 {return 4;}
 
-	fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {return true;}
+	fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {
+		if AbsDiffEq::abs_diff_eq(self, other, epsilon) {
+			return true;
+		}
+		// Trivial negative sign check
+		if self.signum() != other.signum() {
+			return false;
+		}
+		// ULPS difference comparison
+		let int_self = ((self.0 as u64)>>(PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS)) + ((self.0 as u64)<<PSEUDO_DOUBLE_EXP_BITS);
+		let int_other = ((other.0 as u64)>>(PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS)) + ((other.0 as u64)<<PSEUDO_DOUBLE_EXP_BITS);
+		if int_self <= int_other {
+			int_other - int_self <= max_ulps as u64
+		} else {
+			int_self - int_other <= max_ulps as u64
+		}
+	}
 }
 
 impl SimdValue for PseudoDouble {
@@ -942,7 +980,7 @@ impl PseudoDouble {
 	// 	if self.0>0 {
 	// 		return PD_ONE;
 	// 	} else if self.0<0 {
-	// 		return PD_ONE.const_neg();
+	// 		return PD_NEG_ONE;
 	// 	} else {
 	// 		return PD_ZERO;
 	// 	}
@@ -1870,14 +1908,14 @@ impl PseudoDouble {
 	}
 
 	pub const fn asin(self) -> PseudoDouble {
-		if self.const_less_than(PD_ONE.const_neg()) || PD_ONE.const_less_than(self) {
+		if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
 			panic!("acosh of number <1");
 		}
 		self.atan2(PD_ONE.const_sub(self.const_mul(self)).sqrt())
 	}
 
 	pub const fn acos(self) -> PseudoDouble {
-		if self.const_less_than(PD_ONE.const_neg()) || PD_ONE.const_less_than(self) {
+		if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
 			panic!("acosh of number <1");
 		}
 		PD_ONE.const_sub(self.const_mul(self)).sqrt().atan2(self)
@@ -1911,7 +1949,7 @@ impl PseudoDouble {
 	}
 
 	pub const fn acosh(self) -> PseudoDouble {
-		if self.const_less_than_or_equal(PD_ONE.const_neg()) || PD_ONE.const_less_than_or_equal(self) {
+		if self.const_less_than_or_equal(PD_NEG_ONE) || PD_ONE.const_less_than_or_equal(self) {
 			panic!("acosh of number <1");
 		}
 		self.const_add(self.const_mul(self).const_sub(PD_ONE).sqrt()).ln()
@@ -1996,7 +2034,7 @@ impl ComplexField for PseudoDouble {
 }
 
 impl Display for PseudoDouble {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", f64::from(*self))
     }
 }
