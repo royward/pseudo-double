@@ -265,9 +265,13 @@ impl SubsetOf<PseudoDouble> for PseudoDouble {
 
 impl SubsetOf<PseudoDouble> for f64 {
 
-    fn to_superset(&self) -> PseudoDouble {panic!("implicit conversion from f64 to PseudoDouble not allowed")}
+    fn to_superset(&self) -> PseudoDouble {
+		// Need to do some limited conversions, because some library functions (e.g. from_axis_angle in nalgebra-glm)
+		// use f64 to store simple constants. This is a hack that would mean modifying the libraries to remove
+		PseudoDouble::double_to_pseudodouble_implicit_safe(*self)
+	}
 
-    fn is_in_subset(_superset: &PseudoDouble) -> bool {true}
+    fn is_in_subset(superset: &PseudoDouble) -> bool { true }
 
     fn from_superset_unchecked(superset: &PseudoDouble) -> f64 { f64::from(*superset) }
 }
@@ -318,6 +322,24 @@ impl From<PseudoDouble> for i64 {
 			}
 		}
 		return (x.0&EXP_MASK_INV)>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
+    }
+}
+
+impl From<PseudoDouble> for i128 {
+    fn from(x: PseudoDouble) -> Self {
+		if x.0==0 {
+			return 0;
+		}
+		let exponent=((x.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS) as i32;
+		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
+			return 0;
+		}
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
+			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
+				panic!("Overflow converting PseudoDouble to i64");
+			}
+		}
+		return (((x.0&EXP_MASK_INV) as i128)<<64)>>(PSEUDO_DOUBLE_TOTAL_BITS+64-exponent);
     }
 }
 
@@ -1060,6 +1082,43 @@ impl PseudoDouble {
 		let raw_exponent=(((i as u64)>>52)&0x7FF) as i64;
 		let exponent=raw_exponent+PSEUDO_DOUBLE_EXP_BIAS as i64-0x3FF+2;
 		let old_mantissa=i&0xFFFFFFFFFFFFFi64;
+		let mantissa=old_mantissa+0x10000000000000i64; // add in the implied bit
+		if negative {
+			if old_mantissa==0 {
+				if exponent<1 {
+					return PD_ZERO;
+				}
+				if exponent>EXP_MASK+1 {
+					panic!("Overflow in double_to_pseudodouble");
+				}
+				return PseudoDouble((1<<(PSEUDO_DOUBLE_TOTAL_BITS-1))+exponent-1);
+			}
+		}
+		if exponent<0 {
+			return PD_ZERO;
+		}
+		if exponent>EXP_MASK {
+			panic!("Overflow in double_to_pseudodouble");
+		}
+		let mantissa=shift_left_signed(mantissa,PSEUDO_DOUBLE_TOTAL_BITS-54);
+		//mantissa=(mantissa+PSEUDO_DOUBLE_HALF_ULP)&~PSEUDO_DOUBLE_HALF_ULP;
+		if negative {
+			return PseudoDouble(-(mantissa&EXP_MASK_INV)+exponent);
+		} else {
+			return PseudoDouble((mantissa&EXP_MASK_INV)+exponent);
+		}
+	}
+
+	pub fn double_to_pseudodouble_implicit_safe(f:f64) -> PseudoDouble {
+		if f==0.0 {
+			return PD_ZERO;
+		}
+		let i=f64::to_bits(f) as i64;
+		let negative=i<0;
+		let raw_exponent=(((i as u64)>>52)&0x7FF) as i64;
+		let exponent=raw_exponent+PSEUDO_DOUBLE_EXP_BIAS as i64-0x3FF+2;
+		let old_mantissa=i&0xFFFFFFFFFFFFFi64;
+		if (old_mantissa&0xFFFFFFFFFFFFi64)!=0 {panic!("unsafe to convert the following f64 to PseudoDouble: {}",f)}
 		let mantissa=old_mantissa+0x10000000000000i64; // add in the implied bit
 		if negative {
 			if old_mantissa==0 {
