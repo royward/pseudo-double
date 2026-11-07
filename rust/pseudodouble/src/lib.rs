@@ -27,6 +27,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::fmt::{self,Display};
 use simba::scalar::{Field,RealField,ComplexField,SubsetOf};
 use simba::simd::{SimdValue};
 use std::ops::{Add, AddAssign, Sub, SubAssign, Neg, Mul, MulAssign, Div, DivAssign, Rem, RemAssign};
@@ -34,17 +35,16 @@ use std::cmp::{Eq, Ordering};
 use approx::{UlpsEq, AbsDiffEq, RelativeEq};
 use std::convert::From;
 use num_traits::{Bounded,Signed,Num,Zero,One,FromPrimitive};
-use std::fmt::{Display,Formatter};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct PseudoDouble(pub i64);
 
-const PSEUDO_DOUBLE_TOTAL_BITS: i32 = 64;
-const PSEUDO_DOUBLE_EXP_BITS: i32 = 16;
-const EXP_MASK: i64 = (1<<PSEUDO_DOUBLE_EXP_BITS)-1;
-const EXP_MASK_INV: i64 = !EXP_MASK as i64;
-const PSEUDO_DOUBLE_HALF_ULP: i64 = (1<<(PSEUDO_DOUBLE_EXP_BITS-1))-1;
-const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
+pub const PSEUDO_DOUBLE_TOTAL_BITS: i32 = 64;
+pub const PSEUDO_DOUBLE_EXP_BITS: i32 = 16;
+pub const EXP_MASK: i64 = (1<<PSEUDO_DOUBLE_EXP_BITS)-1;
+pub const EXP_MASK_INV: i64 = !EXP_MASK as i64;
+pub const PSEUDO_DOUBLE_HALF_ULP: i64 = (1<<(PSEUDO_DOUBLE_EXP_BITS-1))-1;
+pub const PSEUDO_DOUBLE_EXP_BIAS: i64 = 1<<(PSEUDO_DOUBLE_EXP_BITS-1);
 
 pub const PD_ZERO:         PseudoDouble = PseudoDouble(0);
 pub const PD_ONE:          PseudoDouble = PseudoDouble::pdc10(1,0);
@@ -271,7 +271,7 @@ impl SubsetOf<PseudoDouble> for f64 {
 		PseudoDouble::double_to_pseudodouble_implicit_safe(*self)
 	}
 
-    fn is_in_subset(superset: &PseudoDouble) -> bool { true }
+    fn is_in_subset(_superset: &PseudoDouble) -> bool { true }
 
     fn from_superset_unchecked(superset: &PseudoDouble) -> f64 { f64::from(*superset) }
 }
@@ -307,6 +307,12 @@ impl From<u64> for PseudoDouble {
     }
 }
 
+impl From<usize> for PseudoDouble {
+	fn from(x : usize) -> Self {
+		Self::from(x as u64)
+	}
+}
+
 impl From<PseudoDouble> for i64 {
     fn from(x: PseudoDouble) -> Self {
 		if x.0==0 {
@@ -331,73 +337,31 @@ impl From<PseudoDouble> for i128 {
 			return 0;
 		}
 		let exponent=((x.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS) as i32;
-		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
+		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=128  {
 			return 0;
 		}
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
-			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
-				panic!("Overflow converting PseudoDouble to i64");
+			if exponent>128 {
+				panic!("Overflow converting PseudoDouble to i128");
 			}
 		}
-		return (((x.0&EXP_MASK_INV) as i128)<<64)>>(PSEUDO_DOUBLE_TOTAL_BITS+64-exponent);
+		if PSEUDO_DOUBLE_TOTAL_BITS>=exponent {
+			((x.0&EXP_MASK_INV) as i128)>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent)
+		} else {
+			((x.0&EXP_MASK_INV) as i128)<<(exponent-PSEUDO_DOUBLE_TOTAL_BITS)
+		}
     }
 }
 
 impl From<PseudoDouble> for u64 {
     fn from(x: PseudoDouble) -> Self {
-		if x.0<0 {
-			panic!("Overflow converting negative PseudoDouble to u64");
-		}
-		if x.0==0 {
-			return 0;
-		}
-		let exponent=((x.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS) as i32;
-		let vx=(x.0&EXP_MASK_INV) as u64;
-		if exponent==PSEUDO_DOUBLE_TOTAL_BITS+1 {
-			return vx<<1;
-		}
-		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
-			return 0;
-		}
-		if cfg!(feature="panic_on_pseudodouble_overflow") {
-			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
-				panic!("Overflow converting PseudoDouble to u64");
-			}
-		}
-		return vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
-    }
+		x.const_from_u64()
+	}
 }
 
 impl From<PseudoDouble> for f64 {
-    fn from(x: PseudoDouble) -> Self {
-		if x.0==0 {
-			return 0.0;
-		}
-		let mut vx=x.0&EXP_MASK_INV;
-		let sgn;
-		let exponent=((x.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS+0x3FF-2) as i32;
-		if vx<0 {
-			sgn=0x8000000000000000u64;
-			if vx==(1<<(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
-				if exponent< -1 {
-					return 0.0;
-				}
-				if exponent>=0x7FF {
-					return f64::NAN;
-				}
-				return f64::from_bits((((exponent+1) as u64)<<52)+sgn);
-			}
-			vx=-vx;
-		} else {
-			sgn=0;
-		}
-		if exponent<0 {
-			return 0.0;
-		}
-		if exponent>0x7FF {
-			return f64::NAN;
-		}
-		return f64::from_bits(((vx&0x3FFFFFFFFFFFFFFF)>>10) as u64+((exponent as u64)<<52)+sgn);
+	fn from(x: PseudoDouble) -> Self {
+		x.const_from_f64()
 	}
 }
 
@@ -974,25 +938,25 @@ impl Field for PseudoDouble {}
 
 impl PseudoDouble {
 
-	// pub const fn abs(&self) -> Self {
-	// 	if self.0>=0 {
-	// 		return *self;
-	// 	}
-	// 	let expx=self.0&EXP_MASK;
-	// 	let vx=self.0&EXP_MASK_INV;
-	// 	if (vx<<2)==0 {
-	// 		let hi_byte=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-8)) as u8;
-	// 		if hi_byte==0x80 {
-	// 			if cfg!(feature="panic_on_pseudodouble_overflow") {
-	// 				if expx==EXP_MASK {
-	// 					panic!("Overflow in PseudoDouble abs");
-	// 				}
-	// 			}
-	// 			return PseudoDouble((vx>>1)+expx+1);
-	// 		}
-	// 	}
-	// 	return PseudoDouble(-vx+expx as i64);
-	// }
+	pub const fn abs(&self) -> Self {
+		if self.0>=0 {
+			return *self;
+		}
+		let expx=self.0&EXP_MASK;
+		let vx=self.0&EXP_MASK_INV;
+		if (vx<<2)==0 {
+			let hi_byte=(self.0>>(PSEUDO_DOUBLE_TOTAL_BITS-8)) as u8;
+			if hi_byte==0x80 {
+				if cfg!(feature="panic_on_pseudodouble_overflow") {
+					if expx==EXP_MASK {
+						panic!("Overflow in PseudoDouble abs");
+					}
+				}
+				return PseudoDouble((vx>>1)+expx+1);
+			}
+		}
+		return PseudoDouble(-vx+expx as i64);
+	}
  //
 	// pub const fn abs_sub(&self, other:&Self) -> Self {
 	// 	return self.const_sub(*other).abs();
@@ -1015,6 +979,81 @@ impl PseudoDouble {
 	// pub const fn is_negative(&self) -> bool {
 	// 	return self.0<0;
 	// }
+
+	pub const fn const_from_f64(self) -> f64 {
+		if self.0==0 {
+			return 0.0;
+		}
+		let mut vx=self.0&EXP_MASK_INV;
+		let sgn;
+		let exponent=((self.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS+0x3FF-2) as i32;
+		if vx<0 {
+			sgn=0x8000000000000000u64;
+			if vx==(1<<(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
+				if exponent< -1 {
+					return 0.0;
+				}
+				if exponent>=0x7FF {
+					return f64::NAN;
+				}
+				return f64::from_bits((((exponent+1) as u64)<<52)+sgn);
+			}
+			vx=-vx;
+		} else {
+			sgn=0;
+		}
+		if exponent<0 {
+			return 0.0;
+		}
+		if exponent>0x7FF {
+			return f64::NAN;
+		}
+		return f64::from_bits(((vx&0x3FFFFFFFFFFFFFFF)>>10) as u64+((exponent as u64)<<52)+sgn);
+	}
+
+	pub const fn const_from_u64(self) -> u64 {
+		if self.0<0 {
+			panic!("Overflow converting negative PseudoDouble to u64");
+		}
+		if self.0==0 {
+			return 0;
+		}
+		let exponent=((self.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS) as i32;
+		let vx=(self.0&EXP_MASK_INV) as u64;
+		if exponent==PSEUDO_DOUBLE_TOTAL_BITS+1 {
+			return vx<<1;
+		}
+		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
+			return 0;
+		}
+		if cfg!(feature="panic_on_pseudodouble_overflow") {
+			if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
+				panic!("Overflow converting PseudoDouble to u64");
+			}
+		}
+		return vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
+	}
+
+	pub const fn const_from_u64_saturate(self) -> u64 {
+		if self.0<0 {
+			return 0;
+		}
+		if self.0==0 {
+			return 0;
+		}
+		let exponent=((self.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS) as i32;
+		let vx=(self.0&EXP_MASK_INV) as u64;
+		if exponent==PSEUDO_DOUBLE_TOTAL_BITS+1 {
+			return vx<<1;
+		}
+		if PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64  {
+			return 0;
+		}
+		if exponent>PSEUDO_DOUBLE_TOTAL_BITS {
+			return u64::MAX;
+		}
+		return vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
+	}
 
 	pub const fn pdc10(dd: i64, ee: i32) -> PseudoDouble {
 		if dd==0 {
@@ -1488,15 +1527,26 @@ impl PseudoDouble {
 			return self;
 		}
 		let yy=y as i64;
+		let t=(self.0&EXP_MASK)+yy;
 		if cfg!(feature="panic_on_pseudodouble_overflow") {
-			if (self.0&EXP_MASK)+yy>EXP_MASK {
+			if t>EXP_MASK {
 				panic!("Overflow in PseudoDouble ldexp");
 			}
 		}
-		if (self.0&EXP_MASK)+yy<0 {
+		if t+yy<0 {
 			return PD_ZERO;
 		}
 		return PseudoDouble(self.0+yy);
+	}
+
+	pub const fn frexp(self, exp :&mut i32) -> PseudoDouble {
+		if self.0==0 {
+			return self;
+		}
+		let vx=self.0&EXP_MASK_INV;
+		let adj : i64 = if (vx<<2)==0 && vx<0 {0} else {1};
+		*exp=((self.0&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS-adj) as i32;
+		return PseudoDouble((vx&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+adj)
 	}
 
 	// e^x=(2^log2(e))^x=2^(log2(e)*x)
@@ -1670,20 +1720,21 @@ impl PseudoDouble {
 		return PseudoDouble(newe+(((exp2_64_fixed((fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS)) as u64) as i64)<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV));
 	}
 
-	pub fn powi(self, exp: i32) -> PseudoDouble {
-		if exp == 0 {
-			return PD_ONE;
+	pub const fn powi(self, exp: i32) -> PseudoDouble {
+		if self.0==0 && exp<0 {
+			panic!("negative integer power of zero on powi");
 		}
-		let invert = self.0<0;
-		let (mut expm,mut base) = if invert { (exp,self) } else { (-exp,PD_ONE.const_div(self)) };
-
+		if exp == i32::MIN {
+			panic!("i32::MIN exponent not supported on powi");
+		}
+		let (mut expm,mut base) = if exp<0 { (-exp,PD_ONE.const_div(self)) } else { (exp,self) };
 		let mut result = PD_ONE;
 		while expm > 0 {
-			if expm % 2 == 1 {
-				result = result * base;
+			if expm & 1 == 1 {
+				result = result.const_mul(base);
 			}
-			base = base * base;
-			expm /= 2;
+			base = base.const_mul(base);
+			expm >>= 1;
 		}
 		result
 	}
@@ -1967,16 +2018,16 @@ impl PseudoDouble {
 	}
 
 	pub const fn asin(self) -> PseudoDouble {
-		if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
-			panic!("acosh of number <1");
-		}
+		// if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
+		// 	panic!("asin of number <1");
+		// }
 		self.atan2(PD_ONE.const_sub(self.const_mul(self)).sqrt())
 	}
 
 	pub const fn acos(self) -> PseudoDouble {
-		if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
-			panic!("acosh of number <1");
-		}
+		// if self.const_less_than(PD_NEG_ONE) || PD_ONE.const_less_than(self) {
+		// 	panic!("acos of number <1");
+		// }
 		PD_ONE.const_sub(self.const_mul(self)).sqrt().atan2(self)
 	}
 
@@ -2093,7 +2144,7 @@ impl ComplexField for PseudoDouble {
 }
 
 impl Display for PseudoDouble {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", f64::from(*self))
     }
 }
@@ -2124,4 +2175,10 @@ impl RealField for PseudoDouble {
 	fn ln_2() -> Self { PseudoDouble::pdc10(2,0).ln() }
 	fn ln_10() -> Self { PseudoDouble::pdc10(10,0).ln() }
 	fn atan2(self, other: Self) -> Self { self.atan2(other) }
+}
+
+impl fmt::Debug for PseudoDouble {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", f64::from(*self))
+    }
 }

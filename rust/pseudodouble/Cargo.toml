@@ -5,13 +5,13 @@ edition = "2021"
 
 [dependencies]
 num-traits = "0.2"
-simba = "0.9"
+simba = "0.10"
 approx = "0.5"
 fmt = "0.1"
 
 [dev-dependencies]
 libm = "0.2.11"
-rand = "0.8.5"
+rand = "0.10.3"
 
 [features]
 check_on_pseudodouble_underflow=[]

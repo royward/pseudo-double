@@ -91,7 +91,7 @@ fn do_tests() {
 				failures+=1;
 				println!("difference in min({},{})",f1,f2);
 			}
-            assert_eq!((PseudoDouble::max(pd1,pd2)==pd1),(f64::max(f1,f2)==f1),"min failed");
+            assert_eq!((PseudoDouble::min(pd1,pd2)==pd1),(f64::min(f1,f2)==f1),"min failed");
 			if f2!=0.0 {
 				let ffd=f64::from(pd1/pd2);
 				count+=1;
