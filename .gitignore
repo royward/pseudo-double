@@ -32,3 +32,6 @@
 *.app
 PseudoDouble/
 
+rust/pseudodouble/target/
+rust/pseudodouble/Cargo.lock
+

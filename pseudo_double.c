@@ -80,7 +80,7 @@ pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e) {
 		return 0;
 	}
 	int negative=(d<0);
-	int lead_bits=clz(negative?~d:d);
+	int lead_bits=PD_CLZ(negative?~d:d);
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits+e;
 }
 
@@ -89,7 +89,7 @@ pseudo_double_i int64_to_pdi(int64_t d) {
 		return 0;
 	}
 	int negative=(d<0);
-	int lead_bits=clz(negative?~d:d);
+	int lead_bits=PD_CLZ(negative?~d:d);
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
@@ -97,7 +97,7 @@ pseudo_double_i uint64_to_pdi(uint64_t d) {
 	if(d==0) {
 		return 0;
 	}
-	int lead_bits=clz(d);
+	int lead_bits=PD_CLZ(d);
 	return ((shift_left_unsigned(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
@@ -387,17 +387,17 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		if(log_frac==0) {
 			return uint64_to_pdi(1); // 1^z=1
 		}
-		int lead_bits=clz(log_frac);
+		int lead_bits=PD_CLZ(log_frac);
 		vx=log_frac<<(lead_bits-1);
 		expx=2-lead_bits;
 	} else if(e==-1) {
 		log_frac+=0x8000000000000000ULL;
-		int lead_bits=clz(~log_frac);
+		int lead_bits=PD_CLZ(~log_frac);
 		vx=log_frac<<(lead_bits-1);
 		expx=2-lead_bits;
 	} else {
 		int negative=(e<0);
-		int lead_bits=clz(negative?~e:e);
+		int lead_bits=PD_CLZ(negative?~e:e);
 		vx=((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)));
 		expx=65-lead_bits;
 	}
@@ -408,7 +408,7 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		// special case - a mantissa of zero will always make the whole word zero. Makes comparisons much easier
 		return uint64_to_pdi(1); // 2^0=1
 	}
-	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
+	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t er=(int32_t)(expx+expy-leading_bits);
 	int32_t new_exponent;
@@ -468,15 +468,15 @@ pseudo_double_i pdi_log2(pseudo_double_i x) {
 		if(log_frac==0) {
 			return 0;
 		}
-		int lead_bits=clz(log_frac);
+		int lead_bits=PD_CLZ(log_frac);
 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
 	} else if(e==-1) {
 		log_frac+=0x8000000000000000ULL;
-		int lead_bits=clz(~log_frac);
+		int lead_bits=PD_CLZ(~log_frac);
 		return ((log_frac<<(lead_bits-1))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+2-lead_bits;
 	}
 	int negative=(e<0);
-	int lead_bits=clz(negative?~e:e);
+	int lead_bits=PD_CLZ(negative?~e:e);
 	return (((e<<(PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))+(log_frac>>(64-lead_bits)))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
 }
 
@@ -627,7 +627,7 @@ pseudo_double_i pdi_sin_rev(pseudo_double_i x) {
 	if(negative) {
 		d=-d;
 	}
-	int lead_bits=clz(negative?~d:d);
+	int lead_bits=PD_CLZ(negative?~d:d);
 	return (shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65)&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+3-lead_bits;
 }
 
@@ -672,7 +672,7 @@ pseudo_double_i pdi_cos_rev(pseudo_double_i x) {
 	if(negative) {
 		d=-d;
 	}
-	int lead_bits=clz(negative?~d:d);
+	int lead_bits=PD_CLZ(negative?~d:d);
 	return (shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65)&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+3-lead_bits;
 }
 
@@ -811,7 +811,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 		if(vr==0) {
 			ratio=0;
 		} else {
-			int32_t leading_bits=clz(vr)-1;
+			int32_t leading_bits=PD_CLZ(vr)-1;
 			vr<<=leading_bits;
 			int32_t new_exponent=expy-expx-leading_bits;
 			if(new_exponent<-63) {
@@ -827,7 +827,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 		return 0;
 	}
 	int negatived=(d<0);
-	int lead_bits=clz(negatived?~d:d);
+	int lead_bits=PD_CLZ(negatived?~d:d);
 	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+PSEUDO_DOUBLE_EXP_BIAS+1-lead_bits;
 }
 
@@ -864,7 +864,7 @@ pseudo_double_i pdi_ceil(pseudo_double_i x) {
 	}
 	uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e-1))-1;
 	signed_pd_internal vr=((mantissa>>1)+m)&~m;
-	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
+	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
 #if PD_ERROR_CHECK
@@ -894,7 +894,7 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 	uint64_t add=1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e-2);
 	uint64_t m=(add<<1)-1;
 	signed_pd_internal vr=((mantissa>>1)+(mantissa>0?add:add-1))&~m;
-	int32_t leading_bits=clz(vr>0?vr:~vr)-1;
+	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
 	vr<<=leading_bits;
 	int32_t new_exponent=exponent+1-leading_bits;
 #if PD_ERROR_CHECK
