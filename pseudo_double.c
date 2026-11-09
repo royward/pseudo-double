@@ -164,10 +164,13 @@ int64_t pdi_to_int64fixed2(pseudo_double_i x, int32_t e) {
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	int64_t ret=vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
 	return ret;
 }
@@ -188,10 +191,13 @@ uint64_t pdi_to_uint64(pseudo_double_i x) {
 	if(exponent>PSEUDO_DOUBLE_TOTAL_BITS) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(PSEUDO_DOUBLE_TOTAL_BITS-exponent>=64) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	uint64_t ret=vx>>(PSEUDO_DOUBLE_TOTAL_BITS-exponent);
 	return ret;
 }
@@ -435,13 +441,14 @@ pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y) {
 		new_exponent=(int32_t)(((signed_pd_internal)(vr&~m))>>(PSEUDO_DOUBLE_TOTAL_BITS-er));
 		fraction=((signed_pd_internal)(vr&m))<<er;
 	} else {
-#if PD_ERROR_CHECK
 		if(vr<0) {
 			PD_DO_ERROR_UNDERFLOW;
+			return (pseudo_double_i)0;
+#if PD_ERROR_CHECK
 		} else {
 			PD_DO_ERROR_OVERFLOW;
-		}
 #endif
+		}
 	}
 	int32_t newe=new_exponent+PSEUDO_DOUBLE_EXP_BIAS+2;
 	if(newe<0) { // common to have underflow, so leave this in
@@ -514,6 +521,7 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		// common to have underflow, so leave this in even if errors otherwise are turned off
 		if(((signed_pd_internal)x)<0) {
 			PD_DO_ERROR_UNDERFLOW;
+			return (pseudo_double_i)0;
 #if PD_ERROR_CHECK
 		} else {
 			PD_DO_ERROR_OVERFLOW;
@@ -521,13 +529,14 @@ pseudo_double_i pdi_exp2(pseudo_double_i x) {
 		}
 	}
 	int32_t newe=new_exponent+PSEUDO_DOUBLE_EXP_BIAS+2;
-#if PD_ERROR_CHECK
 	if(newe<0) {
 		PD_DO_ERROR_UNDERFLOW;
+		return (pseudo_double_i)0;
+#if PD_ERROR_CHECK
 	} else if(newe>EXP_MASK) {
 		PD_DO_ERROR_OVERFLOW;
-	}
 #endif
+	}
 	return newe+((exp2_64_fixed(fraction<<(64-PSEUDO_DOUBLE_TOTAL_BITS))<<(64-PSEUDO_DOUBLE_TOTAL_BITS))&EXP_MASK_INV);
 }
 
@@ -803,9 +812,7 @@ pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x) {
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
 	uint64_t ratio;
 	if(x==y) {
-		ratio=uint64_to_pdi(1);
-	} else if(x==pdi_neg(y)) {
-		ratio=int64_to_pdi(-1);
+		ratio=1ULL<<62;
 	} else {
 		signed_pd_internal vr=(signed_pd_internal)divs64hi((vy>>2),vx);
 		if(vr==0) {
@@ -871,10 +878,13 @@ pseudo_double_i pdi_ceil(pseudo_double_i x) {
 	if(new_exponent>EXP_MASK) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(new_exponent<0) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(new_exponent<0) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	return (pseudo_double_i)(vr+new_exponent);
 }
 
@@ -901,10 +911,13 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 	if(new_exponent>EXP_MASK) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(new_exponent<0) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(new_exponent<0) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	return (pseudo_double_i)(vr+new_exponent);
 }
 

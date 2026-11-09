@@ -37,15 +37,19 @@
 #include <intrin.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Can set any of these or just use the defaults
-//#define PSEUDO_DOUBLE_TOTAL_BITS 64
-//#define PSEUDO_DOUBLE_EXP_BITS 16
-// This will default to 2^(PSEUDO_DOUBLE_EXP_BITS-1)
-//#define PSEUDO_DOUBLE_EXP_BIAS 32768
+//#define PSEUDO_DOUBLE_EXP_BITS 10
 // This will default to return PD_NAN
 //#define PD_DO_ERROR_OVERFLOW return PD_NAN
-//#define PD_DO_ERROR_UNDERFLOW return 0
+//#define PD_DO_ERROR_UNDERFLOW
 //#define PD_DO_ERROR_RANGE return PD_NAN
+
+// use this to turn off all the intrinsics and use the code in pseudo_double_portable.h
+//#define PD_FORCE_PORTABLE 1
 
 // Mantissa
 // [.1000 .. .1011] = [-0.5 .. -0.25)
@@ -54,8 +58,8 @@
 #define PSEUDO_DOUBLE_TOTAL_BITS 64
 
 #ifndef PSEUDO_DOUBLE_EXP_BITS
-// Recommend 8,16 or 32 for this. Other values will work but be less efficient
-#define PSEUDO_DOUBLE_EXP_BITS 16
+// Recommend 8,10,11 or 16 for this. Other values should work but are untested. Less than 8 will mean transcendental functions are inaccurate in the last few bits.
+#define PSEUDO_DOUBLE_EXP_BITS 10
 #endif
 
 #define EXP_MASK ((1LL<<PSEUDO_DOUBLE_EXP_BITS)-1)
@@ -69,38 +73,36 @@ typedef int64_t signed_pd_internal;
 // Any C99 compiler
 #include "pseudo_double_portable.h"
 #define PD_CLZ(x) pd_clz64_portable(x)
-inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
-inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
+static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
+static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #elif defined(_MSC_VER) && defined(_M_X64)
-#include <intrin.h>
 static inline int PD_CLZ(unsigned __int64 x) {unsigned long i; _BitScanReverse64(&i,x); return 63-(int)i;}
-inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {unsigned __int64 hi; _umul128(x,y,&hi); return hi;}
-inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {__int64 hi; _mul128(x,y,&hi); return hi;}
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {__int64 r; __int64 q=_div128(x,0,y,&r);return q-((r!=0)&((r^y)<0));}
+static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {unsigned __int64 hi; _umul128(x,y,&hi); return hi;}
+static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {__int64 hi; _mul128(x,y,&hi); return hi;}
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {__int64 r; __int64 q=_div128(x,0,y,&r);return q-((r!=0)&((r^y)<0));}
 #elif defined(_MSC_VER) && defined(_M_ARM64)
-#include <intrin.h>
 #include "pseudo_double_portable.h"
 #define PD_CLZ(x) ((int)_CountLeadingZeros64(x))
-inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return __umulh(x,y);}
-inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return __mulh(x,y);}
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
+static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return __umulh(x,y);}
+static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return __mulh(x,y);}
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #elif defined(__SIZEOF_INT128__)
 #define PD_CLZ(x) __builtin_clzll(x)
-typedef __int128 signed_large_pd_internal;
-typedef unsigned __int128 unsigned_large_pd_internal;
-inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return (signed_pd_internal)(((signed_large_pd_internal)x*y)>>64);}
-inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return (unsigned_pd_internal)(((unsigned_large_pd_internal)x*y)>>64);}
+__extension__ typedef __int128 signed_large_pd_internal;
+__extension__ typedef unsigned __int128 unsigned_large_pd_internal;
+static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return (signed_pd_internal)(((signed_large_pd_internal)x*y)>>64);}
+static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return (unsigned_pd_internal)(((unsigned_large_pd_internal)x*y)>>64);}
 #if defined(__x86_64__)
 // floor(x*2^64/y) with the hardware divide; remainder comes free in rdx.
-// Requires |x|<|y|/2 so the quotient fits, otherwise idiv faults (always true in pdi_div).
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
+// Requires abs(x)<abs(y)/2 or (abs(x)==abs(y)/2,x and y different signs) (guaranteed by the shift right by 2 in pdi_div) so the quotient fits, otherwise idiv faults.
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
 	signed_pd_internal q,r;
 	__asm__("idivq %4" : "=a"(q), "=d"(r) : "a"((signed_pd_internal)0), "d"(x), "rm"(y) : "cc");
 	return q-((r!=0)&((r^y)<0));
 }
 #else
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
 	signed_large_pd_internal n=(signed_large_pd_internal)x*((signed_large_pd_internal)1<<64);
 	signed_pd_internal q=(signed_pd_internal)(n/y);
 	signed_pd_internal r=(signed_pd_internal)(0-(unsigned_pd_internal)q*(unsigned_pd_internal)y);  /* exact: |r|<|y| */
@@ -110,14 +112,12 @@ inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
 #else
 #include "pseudo_double_portable.h"
 #define PD_CLZ(x) pd_clz64_portable(x)
-inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
-inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
-inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
+static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
+static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #endif
 
-#ifndef PSEUDO_DOUBLE_EXP_BIAS
-#define PSEUDO_DOUBLE_EXP_BIAS (1U<<(PSEUDO_DOUBLE_EXP_BITS-1))
-#endif
+#define PSEUDO_DOUBLE_EXP_BIAS (1<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
 #define PD_NAN ((pseudo_double_i)(-1))
 
@@ -130,7 +130,7 @@ inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {r
 #define PD_DO_ERROR_OVERFLOW return PD_NAN
 #endif
 #ifndef PD_DO_ERROR_UNDERFLOW
-#define PD_DO_ERROR_UNDERFLOW return 0
+#define PD_DO_ERROR_UNDERFLOW
 #endif
 #ifndef PD_DO_ERROR_RANGE
 #define PD_DO_ERROR_RANGE return PD_NAN
@@ -139,21 +139,21 @@ inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {r
 #define PD_DO_ERROR_SYNTAX return PD_NAN
 #endif
 
-inline signed_pd_internal shift_left_signed(signed_pd_internal x, int shift) {
+static inline signed_pd_internal shift_left_signed(signed_pd_internal x, int shift) {
+	if(shift>=0) {
+		return (signed_pd_internal)((unsigned_pd_internal)x<<shift);
+	}
+	return x>>-shift;
+}
+
+static inline unsigned_pd_internal shift_left_unsigned(unsigned_pd_internal x, int shift) {
 	if(shift>=0) {
 		return x<<shift;
 	}
 	return x>>-shift;
 }
 
-inline unsigned_pd_internal shift_left_unsigned(unsigned_pd_internal x, int shift) {
-	if(shift>=0) {
-		return x<<shift;
-	}
-	return x>>-shift;
-}
-
-inline pseudo_double_i pdi_neg(pseudo_double_i x) {
+static inline pseudo_double_i pdi_neg(pseudo_double_i x) {
 	// check for special cases due to the representation range of two's complement being asymmetric:
 	// mantissa of 1000000000... can't be negated directly and will need an increase in the exponent
 	// mantissa of 0100000000... has exponent decreased after negation
@@ -172,18 +172,19 @@ inline pseudo_double_i pdi_neg(pseudo_double_i x) {
 			return (mantissa>>1)+exponent+1;
 		}
 		if(hi_byte==0x40) {
-#if PD_ERROR_CHECK
 			if(exponent==0) {
+#if PD_ERROR_CHECK
 				PD_DO_ERROR_UNDERFLOW;
-			}
 #endif
+				return (pseudo_double_i)0;
+			}
 			return (mantissa<<1)+exponent-1;
 		}
 	}
 	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
-inline pseudo_double_i pdi_abs(pseudo_double_i x) {
+static inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 	if(((signed_pd_internal)x)>=0) {
 		return x;
 	}
@@ -204,7 +205,7 @@ inline pseudo_double_i pdi_abs(pseudo_double_i x) {
 	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
 }
 
-inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
 	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg?x:y;
@@ -218,7 +219,7 @@ inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
 	return (x>y)?x:y;
 }
 
-inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
 	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg?y:x;
@@ -232,8 +233,8 @@ inline pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y) {
 	return (x>y)?y:x;
 }
 
-inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
-	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+static inline bool pdi_gt(pseudo_double_i x, pseudo_double_i y) {
+	bool neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg;
 	}
@@ -246,8 +247,8 @@ inline int pdi_gt(pseudo_double_i x, pseudo_double_i y) {
 	return (x>y);
 }
 
-inline int pdi_gte(pseudo_double_i x, pseudo_double_i y) {
-	int neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+static inline bool pdi_gte(pseudo_double_i x, pseudo_double_i y) {
+	bool neg=((unsigned_pd_internal)y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
 	if((x^y)>>(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return neg;
 	}
@@ -291,14 +292,17 @@ static inline pseudo_double_i pseudo_round_helper(signed_pd_internal vr,int32_t 
 	if(new_exponent>EXP_MASK) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(new_exponent<0) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(new_exponent<0) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	return (pseudo_double_i)((vr2&EXP_MASK_INV)+new_exponent);
 }
 
-inline pseudo_double_i pdi_add(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_add(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	int32_t ydiffx=expy-expx;
@@ -325,7 +329,7 @@ inline pseudo_double_i pdi_add(pseudo_double_i x, pseudo_double_i y) {
 	return pseudo_round_helper(vx+vy,exp_max,true); // exact sum: ties to even
 }
 
-inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	int32_t ydiffx=expy-expx;
@@ -353,7 +357,7 @@ inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
 	return pseudo_round_helper(vx+vy,exp_max,true); // exact sum: ties to even
 }
 
-inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
@@ -362,31 +366,35 @@ inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	return pseudo_round_helper(vr,expx+expy-PSEUDO_DOUBLE_EXP_BIAS,false);
 }
 
-inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
+static inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
-	if(vy==0) { // leave this one in to avoid division bby zero signal
+	if(vy==0) { // leave this one in to avoid division by zero signal
 		PD_DO_ERROR_RANGE;
+		return PD_NAN;
 	}
 	signed_pd_internal vr=divs64hi(vx>>2,vy);
-	return pseudo_round_helper(vr,expx+expy-PSEUDO_DOUBLE_EXP_BIAS,false);
+	return pseudo_round_helper(vr,expx-expy+PSEUDO_DOUBLE_EXP_BIAS+2,false);
 }
 
-inline pseudo_double_i pdi_ldexp(pseudo_double_i x, int y) {
+static inline pseudo_double_i pdi_ldexp(pseudo_double_i x, int y) {
 	if(x==0) {
 		return 0;
 	}
-#if PD_ERROR_CHECK
 	int32_t expx=x&EXP_MASK;
+#if PD_ERROR_CHECK
 	if(expx+y>(int32_t)EXP_MASK) {
 		PD_DO_ERROR_OVERFLOW;
 	}
-	if(expx+y<0) {
-		PD_DO_ERROR_UNDERFLOW;
-	}
 #endif
+	if(expx+y<0) {
+#if PD_ERROR_CHECK
+		PD_DO_ERROR_UNDERFLOW;
+#endif
+		return (pseudo_double_i)0;
+	}
 	return x+y;
 }
 
@@ -397,42 +405,49 @@ double pdi_to_double(pseudo_double_i d);
 int64_t pdi_to_int64(pseudo_double_i d);
 uint64_t pdi_to_uint64(pseudo_double_i d);
 
-inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
+// (r*2^64+lo)/10 for r<10, portable: two 64/32 steps
+static inline uint64_t div10_128(uint64_t r, uint64_t lo) {
+	uint64_t x=(r<<32)|(lo>>32);
+	uint64_t qh=x/10, r2=x%10;
+	uint64_t y=(r2<<32)|(lo&0xFFFFFFFFu);
+	return (qh<<32)|(y/10);
+}
+
+static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
 	if(d==0) {
 		return 0;
 	}
 	int negative=(d<0);
-	int32_t nexp=0;
-	while(e>0) {
-		int lead_bits=PD_CLZ(negative?~d:d);
-		if(lead_bits<5) {
-			// check that there is no overflow
-			d>>=(5-lead_bits);
-			nexp+=(5-lead_bits);
-		}
-		d*=10;
+	uint64_t hi=negative?0-(uint64_t)d:(uint64_t)d, lo=0;
+	int32_t nexp=-PD_CLZ(hi); // value = (hi:lo)*2^(nexp-64), hi normalised to bit 63
+	hi<<=PD_CLZ(hi);
+	while(e>0) { // (hi:lo)*10, keeping the top 128 bits
+		uint64_t lo_lo=lo*10, lo_hi=multu64hi(lo,10);
+		uint64_t hi_lo=hi*10, top=multu64hi(hi,10);
+		uint64_t mid=hi_lo+lo_hi;
+		top+=(mid<hi_lo);
+		int s=64-PD_CLZ(top); // 3 or 4, since top is 4..9
+		hi=(top<<(64-s))|(mid>>s);
+		lo=(mid<<(64-s))|(lo_lo>>s);
+		nexp+=s;
 		e--;
 	}
-	while(e<0) {
-		int lead_bits=PD_CLZ(negative?~d:d);
-		if(lead_bits>1) {
-			// make the number as accurate as possible
-			d<<=(lead_bits-1);
-			nexp-=(lead_bits-1);
-		}
-		d/=10;
+	while(e<0) { // (hi:lo)/10 by long division
+		uint64_t q1=hi/10, q0=div10_128(hi%10,lo);
+		int s=PD_CLZ(q1); // 3 or 4
+		hi=(q1<<s)|(q0>>(64-s));
+		lo=q0<<s;
+		nexp-=s;
 		e++;
 	}
-	int lead_bits=PD_CLZ(negative?~d:d);
-	int exp=nexp+PSEUDO_DOUBLE_EXP_BIAS+65-lead_bits;
-	return ((shift_left_signed(d,PSEUDO_DOUBLE_TOTAL_BITS+lead_bits-65))&EXP_MASK_INV)+exp;
+	// hi>>1 is a positive normalised mantissa; dropped bits only make it a floor, so half up is correct
+	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,false);
+	return negative?pdi_neg(r):r;
 }
 
 pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e);
 int64_t pdi_to_int64fixed2(pseudo_double_i d, int32_t e);
 
-pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y);
-pseudo_double_i pdi_min(pseudo_double_i x, pseudo_double_i y);
 pseudo_double_i pdi_floor(pseudo_double_i x);
 pseudo_double_i pdi_ceil(pseudo_double_i x);
 pseudo_double_i pdi_round(pseudo_double_i x);
@@ -486,54 +501,59 @@ typedef struct {
 	pseudo_double_i val;
 } pseudo_double;
 
-inline pseudo_double create_pseudo_double_from_internal(pseudo_double_i x) {
+static inline pseudo_double create_pseudo_double_from_internal(pseudo_double_i x) {
 	pseudo_double ret;
 	ret.val=x;
 	return ret;
 }
 
-inline pseudo_double pd_neg(pseudo_double x) {return create_pseudo_double_from_internal(pdi_neg(x.val));}
-inline pseudo_double pd_abs(pseudo_double x) {return create_pseudo_double_from_internal(pdi_abs(x.val));}
-inline int pd_gt(pseudo_double x, pseudo_double y) {return pdi_gt(x.val,y.val);}
-inline int pd_gte(pseudo_double x, pseudo_double y) {return pdi_gte(x.val,y.val);}
-inline pseudo_double pd_max(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_max(x.val,y.val));}
-inline pseudo_double pd_min(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_min(x.val,y.val));}
-inline pseudo_double pd_sub(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_sub(x.val,y.val));}
-inline pseudo_double pd_add(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_add(x.val,y.val));}
-inline pseudo_double pd_mult(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_mult(x.val,y.val));}
-inline pseudo_double pd_div(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_div(x.val,y.val));}
-inline pseudo_double pd_ldexp(pseudo_double x, int y) {return create_pseudo_double_from_internal(pdi_ldexp(x.val,y));}
-inline pseudo_double double_to_pd(double d) {return create_pseudo_double_from_internal(double_to_pdi(d));}
-inline pseudo_double int64_to_pd(int64_t d) {return create_pseudo_double_from_internal(int64_to_pdi(d));}
-inline pseudo_double uint64_to_pd(uint64_t d) {return create_pseudo_double_from_internal(uint64_to_pdi(d));}
-inline double pd_to_double(pseudo_double d) {return pdi_to_double(d.val);}
-inline int64_t pd_to_int64(pseudo_double d) {return pdi_to_int64(d.val);}
-inline uint64_t pd_to_uint64(pseudo_double d) {return pdi_to_uint64(d.val);}
-inline pseudo_double int64fixed10_to_pd(int64_t d, int32_t e) {return create_pseudo_double_from_internal(int64fixed10_to_pdi(d,e));}
-inline pseudo_double int64fixed2_to_pd(int64_t d, int32_t e) {return create_pseudo_double_from_internal(int64fixed2_to_pdi(d,e));}
-inline int64_t pd_to_int64fixed2(pseudo_double d, int32_t e) {return pdi_to_int64fixed2(d.val,e);}
-inline pseudo_double pd_floor(pseudo_double x) {return create_pseudo_double_from_internal(pdi_floor(x.val));}
-inline pseudo_double pd_ceil(pseudo_double x) {return create_pseudo_double_from_internal(pdi_ceil(x.val));}
-inline pseudo_double pd_round(pseudo_double x) {return create_pseudo_double_from_internal(pdi_round(x.val));}
-inline pseudo_double pd_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sqrt(x.val));}
-inline pseudo_double pd_inv_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_inv_sqrt(x.val));}
-inline pseudo_double pd_exp2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp2(x.val));}
-inline pseudo_double pd_exp(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp(x.val));}
-inline pseudo_double pd_log2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log2(x.val));}
-inline pseudo_double pd_log(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log(x.val));}
-inline pseudo_double pd_log10(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log10(x.val));}
-inline pseudo_double pd_pow(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_pow(x.val,y.val));}
-inline pseudo_double pd_sin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin_rev(x.val));}
-inline pseudo_double pd_cos_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos_rev(x.val));}
-inline pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2_rev(x.val,y.val));}
-inline pseudo_double pd_sin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin(x.val));}
-inline pseudo_double pd_cos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos(x.val));}
-inline pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2(x.val,y.val));}
-inline bool pd_gt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>0);}
-inline bool pd_gte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>=0);}
-inline bool pd_lt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<0);}
-inline bool pd_lte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<=0);}
-inline bool pd_eq_zero(pseudo_double x) {return (x.val==0);}
-inline bool pd_neq_zero(pseudo_double x) {return (x.val!=0);}
-inline pseudo_double string_to_pd(const char* str) {return create_pseudo_double_from_internal(string_to_pdi(str));}
+static inline pseudo_double pd_neg(pseudo_double x) {return create_pseudo_double_from_internal(pdi_neg(x.val));}
+static inline pseudo_double pd_abs(pseudo_double x) {return create_pseudo_double_from_internal(pdi_abs(x.val));}
+static inline bool pd_gt(pseudo_double x, pseudo_double y) {return pdi_gt(x.val,y.val);}
+static inline bool pd_gte(pseudo_double x, pseudo_double y) {return pdi_gte(x.val,y.val);}
+static inline pseudo_double pd_max(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_max(x.val,y.val));}
+static inline pseudo_double pd_min(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_min(x.val,y.val));}
+static inline pseudo_double pd_sub(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_sub(x.val,y.val));}
+static inline pseudo_double pd_add(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_add(x.val,y.val));}
+static inline pseudo_double pd_mult(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_mult(x.val,y.val));}
+static inline pseudo_double pd_div(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_div(x.val,y.val));}
+static inline pseudo_double pd_ldexp(pseudo_double x, int y) {return create_pseudo_double_from_internal(pdi_ldexp(x.val,y));}
+static inline pseudo_double double_to_pd(double d) {return create_pseudo_double_from_internal(double_to_pdi(d));}
+static inline pseudo_double int64_to_pd(int64_t d) {return create_pseudo_double_from_internal(int64_to_pdi(d));}
+static inline pseudo_double uint64_to_pd(uint64_t d) {return create_pseudo_double_from_internal(uint64_to_pdi(d));}
+static inline double pd_to_double(pseudo_double d) {return pdi_to_double(d.val);}
+static inline int64_t pd_to_int64(pseudo_double d) {return pdi_to_int64(d.val);}
+static inline uint64_t pd_to_uint64(pseudo_double d) {return pdi_to_uint64(d.val);}
+static inline pseudo_double int64fixed10_to_pd(int64_t d, int32_t e) {return create_pseudo_double_from_internal(int64fixed10_to_pdi(d,e));}
+static inline pseudo_double int64fixed2_to_pd(int64_t d, int32_t e) {return create_pseudo_double_from_internal(int64fixed2_to_pdi(d,e));}
+static inline int64_t pd_to_int64fixed2(pseudo_double d, int32_t e) {return pdi_to_int64fixed2(d.val,e);}
+static inline pseudo_double pd_floor(pseudo_double x) {return create_pseudo_double_from_internal(pdi_floor(x.val));}
+static inline pseudo_double pd_ceil(pseudo_double x) {return create_pseudo_double_from_internal(pdi_ceil(x.val));}
+static inline pseudo_double pd_round(pseudo_double x) {return create_pseudo_double_from_internal(pdi_round(x.val));}
+static inline pseudo_double pd_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sqrt(x.val));}
+static inline pseudo_double pd_inv_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_inv_sqrt(x.val));}
+static inline pseudo_double pd_exp2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp2(x.val));}
+static inline pseudo_double pd_exp(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp(x.val));}
+static inline pseudo_double pd_log2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log2(x.val));}
+static inline pseudo_double pd_log(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log(x.val));}
+static inline pseudo_double pd_log10(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log10(x.val));}
+static inline pseudo_double pd_pow(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_pow(x.val,y.val));}
+static inline pseudo_double pd_sin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin_rev(x.val));}
+static inline pseudo_double pd_cos_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos_rev(x.val));}
+static inline pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2_rev(y.val,x.val));}
+static inline pseudo_double pd_sin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin(x.val));}
+static inline pseudo_double pd_cos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos(x.val));}
+static inline pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2(y.val,x.val));}
+static inline bool pd_gt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>0);}
+static inline bool pd_gte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>=0);}
+static inline bool pd_lt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<0);}
+static inline bool pd_lte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)<=0);}
+static inline bool pd_eq_zero(pseudo_double x) {return (x.val==0);}
+static inline bool pd_neq_zero(pseudo_double x) {return (x.val!=0);}
+static inline pseudo_double string_to_pd(const char* str) {return create_pseudo_double_from_internal(string_to_pdi(str));}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif // PSEUDO_DOUBLE_H

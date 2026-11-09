@@ -49,7 +49,7 @@ static inline uint64_t pd_divlu_portable(uint64_t u1, uint64_t u0, uint64_t v, u
 }
 
 // floor(x*2^64/y). Requires |x|<|y| so the quotient fits (true in pdi_div)
-static inline int64_t pd_divs64hi_floor_portable(int64_t x, int64_t y) {
+static inline int64_t pd_divs64hi_portable(int64_t x, int64_t y) {
 	uint64_t ux=x<0?0-(uint64_t)x:(uint64_t)x;
 	uint64_t uy=y<0?0-(uint64_t)y:(uint64_t)y;
 	uint64_t r;

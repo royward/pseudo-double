@@ -94,9 +94,9 @@ public:
 	inline bool neq_zero() const {return ((signed_pd_internal)val)!=(signed_pd_internal)0;}
 	inline pseudo_double_i get_internal() const {return val;}
 	inline void set_internal(pseudo_double_i f) {val=f;}
+	pseudo_double_i val;
 private:
 	static PseudoDouble create(pseudo_double_i pdi) {PseudoDouble ret;ret.val=pdi;return ret;}
-	pseudo_double_i val;
 	friend PseudoDouble min(const PseudoDouble x, const PseudoDouble y);
 	friend PseudoDouble max(const PseudoDouble x, const PseudoDouble y);
 	friend PseudoDouble floor(const PseudoDouble x);

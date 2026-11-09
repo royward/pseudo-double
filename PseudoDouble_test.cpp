@@ -43,6 +43,9 @@ using std::isinf;
 using std::setprecision;
 using namespace pseudodouble;
 
+const static double EXACT=1;
+const static double NEAR_EXACT16=0.9999999999999999;
+const static double NEAR_EXACT15=0.999999999999999;
 const static double NEAR_EXACT14=0.99999999999999;
 const static double NEAR_EXACT13=0.9999999999999;
 const static double NEAR_EXACT12=0.999999999999;
@@ -128,19 +131,19 @@ int main() {
 			double ff;
 			ff=pd1+pd2;
 			count++;
-			if(!compare(f1+f2,ff,NEAR_EXACT8)) {
+			if(!compare(f1+f2,ff,EXACT)) {
 				failures++;
 				cout << "add  " << f1 << '+' << f2 << "==" << f1+f2 << "!=" << ff << endl;
 			}
 			ff=pd1-pd2;
 			count++;
-			if(!compare(f1-f2,ff,NEAR_EXACT8)) {
+			if(!compare(f1-f2,ff,NEAR_EXACT16)) {
 				failures++;
-				cout << "sub  " << f1 << '-' << f2 << "==" << f1-f2 << "!=" << ff << endl;
+				cout << "sub  " << f1 << '-' << f2 << "==" << f1-f2 << "!=" << ff << endl; // std::hex << ' ' << pd1.val << '-' << pd2.val << '=' << (pd1-pd2).val << std::dec << endl;
 			}
 			ff=pd1*pd2;
 			count++;
-			if(!compare(f1*f2,ff,NEAR_EXACT13)) {
+			if(!compare(f1*f2,ff,NEAR_EXACT16)) {
 				failures++;
 				cout << "mult " << f1 << '*' << f2 << "==" << f1*f2 << "!=" << ff << endl;
 			}
@@ -157,7 +160,7 @@ int main() {
 			if(f2!=0) {
 				count++;
 				ff=pd1/pd2;
-				if(!compare(f1/f2,ff,NEAR_EXACT13)) {
+				if(!compare(f1/f2,ff,EXACT)) {
 					failures++;
 					cout << "div  " << f1 << '/' << f2 << "==" << f1/f2 << "!=" << ff << endl;
 				}
@@ -199,13 +202,13 @@ int main() {
 		PseudoDouble pd=f;
 		double ff=pd;
 		count++;
-		if(!compare(f,ff,NEAR_EXACT13)) {
+		if(!compare(f,ff,EXACT)) {
 			failures++;
 			cout << "conv " << f << ' ' << ff << endl;
 		}
 		ff=-pd;
 		count++;
-		if(!compare(-f,ff,NEAR_EXACT13)) {
+		if(!compare(-f,ff,EXACT)) {
 			failures++;
 			cout << "neg  " << -f << ' ' << ff << endl;
 		}
