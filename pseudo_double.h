@@ -116,6 +116,8 @@ static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
 static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #endif
+// high 64 bits of signed x times unsigned y (the unsigned product, corrected for x's sign); same for every platform
+static inline signed_pd_internal mulsu64hi(signed_pd_internal x,unsigned_pd_internal y) {return (signed_pd_internal)(multu64hi((unsigned_pd_internal)x,y)-(x<0?y:0));}
 
 #define PSEUDO_DOUBLE_EXP_BIAS (1<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
@@ -131,6 +133,9 @@ static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_interna
 #endif
 #ifndef PD_DO_ERROR_UNDERFLOW
 #define PD_DO_ERROR_UNDERFLOW
+#endif
+#ifndef PD_DO_ERROR_INTEGER_OVERFLOW
+#define PD_DO_ERROR_INTEGER_OVERFLOW
 #endif
 #ifndef PD_DO_ERROR_RANGE
 #define PD_DO_ERROR_RANGE return PD_NAN
@@ -413,20 +418,35 @@ static inline uint64_t div10_128(uint64_t r, uint64_t lo) {
 	return (qh<<32)|(y/10);
 }
 
-static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
-	if(d==0) {
+// value = (mhi:mlo)*10^e, negated if negative, rounded once. sticky means non-zero digits after the mantissa were
+// dropped (so the mantissa is slightly below the true value). Rounds to nearest, ties to even when the value is
+// exact, like strtod.
+static inline pseudo_double_i decimal_to_pdi(uint64_t mhi, uint64_t mlo, bool negative, int32_t e, bool sticky) {
+	if(mhi==0 && mlo==0) {
 		return 0;
 	}
-	int negative=(d<0);
-	uint64_t hi=negative?0-(uint64_t)d:(uint64_t)d, lo=0;
-	int32_t nexp=-PD_CLZ(hi); // value = (hi:lo)*2^(nexp-64), hi normalised to bit 63
-	hi<<=PD_CLZ(hi);
+	// value = (hi + lo/2^64)*2^nexp, hi normalised to bit 63
+	uint64_t hi,lo;
+	int32_t nexp;
+	if(mhi==0) {
+		int c=PD_CLZ(mlo);
+		hi=mlo<<c;
+		lo=0;
+		nexp=-c;
+	} else {
+		int c=PD_CLZ(mhi);
+		hi=c==0?mhi:(mhi<<c)|(mlo>>(64-c));
+		lo=mlo<<c;
+		nexp=64-c;
+	}
+	uint64_t dropped=sticky;  // non-zero if bits have been dropped, so (hi:lo) is a floor
 	while(e>0) { // (hi:lo)*10, keeping the top 128 bits
 		uint64_t lo_lo=lo*10, lo_hi=multu64hi(lo,10);
 		uint64_t hi_lo=hi*10, top=multu64hi(hi,10);
 		uint64_t mid=hi_lo+lo_hi;
 		top+=(mid<hi_lo);
 		int s=64-PD_CLZ(top); // 3 or 4, since top is 4..9
+		dropped|=lo_lo<<(64-s);
 		hi=(top<<(64-s))|(mid>>s);
 		lo=(mid<<(64-s))|(lo_lo>>s);
 		nexp+=s;
@@ -434,15 +454,21 @@ static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
 	}
 	while(e<0) { // (hi:lo)/10 by long division
 		uint64_t q1=hi/10, q0=div10_128(hi%10,lo);
+		dropped|=lo-q0*10;        // the remainder (it is below 10, so its low 64 bits are all of it)
 		int s=PD_CLZ(q1); // 3 or 4
 		hi=(q1<<s)|(q0>>(64-s));
 		lo=q0<<s;
 		nexp-=s;
 		e++;
 	}
-	// hi>>1 is a positive normalised mantissa; dropped bits only make it a floor, so half up is correct
-	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,false);
+	dropped|=(hi&1)|lo;       // dropped by the shift below
+	// hi>>1 is a positive normalised mantissa; if bits were dropped it is a floor, so half up is correct
+	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,dropped==0);
 	return negative?pdi_neg(r):r;
+}
+
+static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
+	return decimal_to_pdi(0,d<0?0-(uint64_t)d:(uint64_t)d,d<0,e,false);
 }
 
 pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e);
@@ -451,9 +477,11 @@ int64_t pdi_to_int64fixed2(pseudo_double_i d, int32_t e);
 pseudo_double_i pdi_floor(pseudo_double_i x);
 pseudo_double_i pdi_ceil(pseudo_double_i x);
 pseudo_double_i pdi_round(pseudo_double_i x);
+pseudo_double_i pdi_trunc(pseudo_double_i x);
 pseudo_double_i pdi_sqrt(pseudo_double_i x);
 pseudo_double_i pdi_inv_sqrt(pseudo_double_i x);
 pseudo_double_i pdi_exp2(pseudo_double_i x);
+pseudo_double_i pdi_exp10(pseudo_double_i x);
 pseudo_double_i pdi_exp(pseudo_double_i x);
 pseudo_double_i pdi_log2(pseudo_double_i x);
 pseudo_double_i pdi_log(pseudo_double_i x);
@@ -461,9 +489,11 @@ pseudo_double_i pdi_log10(pseudo_double_i x);
 pseudo_double_i pdi_pow(pseudo_double_i x, pseudo_double_i y);
 pseudo_double_i pdi_sin_rev(pseudo_double_i x);
 pseudo_double_i pdi_cos_rev(pseudo_double_i x);
+pseudo_double_i pdi_tan_rev(pseudo_double_i x);
 pseudo_double_i pdi_atan2_rev(pseudo_double_i y, pseudo_double_i x);
 pseudo_double_i pdi_sin(pseudo_double_i x);
 pseudo_double_i pdi_cos(pseudo_double_i x);
+pseudo_double_i pdi_tan(pseudo_double_i x);
 pseudo_double_i pdi_atan2(pseudo_double_i y, pseudo_double_i x);
 pseudo_double_i string_to_pdi(const char* str);
 
@@ -530,9 +560,11 @@ static inline int64_t pd_to_int64fixed2(pseudo_double d, int32_t e) {return pdi_
 static inline pseudo_double pd_floor(pseudo_double x) {return create_pseudo_double_from_internal(pdi_floor(x.val));}
 static inline pseudo_double pd_ceil(pseudo_double x) {return create_pseudo_double_from_internal(pdi_ceil(x.val));}
 static inline pseudo_double pd_round(pseudo_double x) {return create_pseudo_double_from_internal(pdi_round(x.val));}
+static inline pseudo_double pd_trunc(pseudo_double x) {return create_pseudo_double_from_internal(pdi_trunc(x.val));}
 static inline pseudo_double pd_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sqrt(x.val));}
 static inline pseudo_double pd_inv_sqrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_inv_sqrt(x.val));}
 static inline pseudo_double pd_exp2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp2(x.val));}
+static inline pseudo_double pd_exp10(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp10(x.val));}
 static inline pseudo_double pd_exp(pseudo_double x) {return create_pseudo_double_from_internal(pdi_exp(x.val));}
 static inline pseudo_double pd_log2(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log2(x.val));}
 static inline pseudo_double pd_log(pseudo_double x) {return create_pseudo_double_from_internal(pdi_log(x.val));}
@@ -540,9 +572,11 @@ static inline pseudo_double pd_log10(pseudo_double x) {return create_pseudo_doub
 static inline pseudo_double pd_pow(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_pow(x.val,y.val));}
 static inline pseudo_double pd_sin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin_rev(x.val));}
 static inline pseudo_double pd_cos_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos_rev(x.val));}
+static inline pseudo_double pd_tan_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_tan_rev(x.val));}
 static inline pseudo_double pd_atan2_rev(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2_rev(y.val,x.val));}
 static inline pseudo_double pd_sin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sin(x.val));}
 static inline pseudo_double pd_cos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cos(x.val));}
+static inline pseudo_double pd_tan(pseudo_double x) {return create_pseudo_double_from_internal(pdi_tan(x.val));}
 static inline pseudo_double pd_atan2(pseudo_double y, pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan2(y.val,x.val));}
 static inline bool pd_gt_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>0);}
 static inline bool pd_gte_zero(pseudo_double x) {return (((signed_pd_internal)x.val)>=0);}

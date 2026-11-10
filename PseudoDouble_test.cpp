@@ -187,7 +187,7 @@ int main() {
 			}
 			count++;
 			ff=atan2(pd1,pd2);
-			if((!compare(atan2(f1,f2),ff,NEAR_EXACT9)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT3)) && (f1>=0 || f2!=0)) {
+			if((!compare(atan2(f1,f2),ff,NEAR_EXACT16)) && (fabs(f2/f1)<1e9 || !compare(atan2(f1,f2),ff,NEAR_EXACT16)) && (f1>=0 || f2!=0)) {
 				failures++;
 				cout << "atan2(" << f1 << ',' << f2 << ")==" << atan2(f1,f2) << "!=" << ff << endl;
 			}
@@ -215,7 +215,7 @@ int main() {
 		if(f>0) {
 			count++;
 			ff=inv_sqrt(pd);
-			if(!compare(1.0/sqrt(f),ff,NEAR_EXACT13)) {
+			if(!compare(1.0/sqrt(f),ff,NEAR_EXACT16)) {
 				failures++;
 				cout << "inv_sqrt  " << 1.0/sqrt(f) << ' ' << ff << endl;
 			}
@@ -223,26 +223,26 @@ int main() {
 		if(f>0) {
 			count++;
 			ff=sqrt(pd);
-			if(!compare(sqrt(f),ff,NEAR_EXACT13)) {
+			if(!compare(sqrt(f),ff,EXACT)) {
 				failures++;
 				cout << "sqrt  " << sqrt(f) << ' ' << ff << endl;
 			}
 		}
 		ff=floor(pd);
 		count++;
-		if(!compare(floor(f),ff,NEAR_EXACT13)) {
+		if(!compare(floor(f),ff,EXACT)) {
 			failures++;
 			cout << "floor  " << floor(f) << ' ' << ff << endl;
 		}
 		ff=ceil(pd);
 		count++;
-		if(!compare(ceil(f),ff,NEAR_EXACT13)) {
+		if(!compare(ceil(f),ff,EXACT)) {
 			failures++;
 			cout << "ceil  " << ceil(f) << ' ' << ff << endl;
 		}
 		ff=round(pd);
 		count++;
-		if(!compare(round(f),ff,NEAR_EXACT13)) {
+		if(!compare(round(f),ff,EXACT)) {
 			failures++;
 			cout << "round  " << round(f) << ' ' << ff << endl;
 		}
@@ -250,7 +250,7 @@ int main() {
 			if(f<128 && f>-128) {
 				count++;
 				ff=exp2(pd);
-				if(!compare(exp2(f),ff,NEAR_EXACT12)) {
+				if(!compare(exp2(f),ff,EXACT)) {
 					failures++;
 					cout << "exp2  " << setprecision(15) << f << ' ' << setprecision(15) << exp2(f) << ' ' << setprecision(15) << ff << endl;
 				}
@@ -260,7 +260,7 @@ int main() {
 			if(f<96 && f>-96) {
 				ff=exp(pd);
 				count++;
-				if(!compare(exp(f),ff,NEAR_EXACT11)) {
+				if(!compare(exp(f),ff,EXACT)) {
 					failures++;
 					cout << "exp  " << setprecision(15) << f << ' ' << setprecision(15) << exp(f) << ' ' << setprecision(15) << ff << endl;
 				}
@@ -269,7 +269,7 @@ int main() {
 		if(f>0) {
 			ff=log2(pd);
 			count++;
-			if(!compare(log2(f),ff,NEAR_EXACT13)) {
+			if(!compare(log2(f),ff,EXACT)) {
 				failures++;
 				cout << "log2  " << setprecision(15) << f << ' ' << setprecision(15) << log2(f) << ' ' << setprecision(15) << ff << endl;
 			}
@@ -277,7 +277,7 @@ int main() {
 		if(f>0) {
 			ff=log(pd);
 			count++;
-			if(!compare(log(f),ff,NEAR_EXACT13)) {
+			if(!compare(log(f),ff,EXACT)) {
 				failures++;
 				cout << "log  " << setprecision(15) << f << ' ' << setprecision(15) << log(f) << ' ' << setprecision(15) << ff << endl;
 			}
@@ -285,7 +285,7 @@ int main() {
 		if(f>0) {
 			ff=log10(pd);
 			count++;
-			if(!compare(log10(f),ff,NEAR_EXACT13)) {
+			if(!compare(log10(f),ff,NEAR_EXACT16)) {
 				failures++;
 				cout << "log10  " << setprecision(15) << f << ' ' << setprecision(15) << log10(f) << ' ' << setprecision(15) << ff << endl;
 			}
@@ -293,15 +293,27 @@ int main() {
 		if(-10000.0<f && f<10000.0) {
 			ff=sin(pd);
 			count++;
-			if(!compare(sin(f),ff,NEAR_EXACT9)) {
+			if(!compare(sin(f),ff,EXACT)) {
 				failures++;
 				cout << "sin  " << f << ' ' << sin(f) << ' ' << ff << endl;
 			}
 			ff=cos(pd);
 			count++;
-			if(!compare(cos(f),ff,NEAR_EXACT9)) {
+			if(!compare(cos(f),ff,EXACT)) {
 				failures++;
 				cout << "cos  " << f << ' ' << cos(f) << ' ' << ff << endl;
+			}
+			ff=tan(pd);
+			count++;
+			if(!compare(tan(f),ff,EXACT)) {
+				failures++;
+				cout << "tan  " << f << ' ' << tan(f) << ' ' << ff << endl;
+			}
+			ff=atan(pd);
+			count++;
+			if(!compare(atan(f),ff,EXACT)) {
+				failures++;
+				cout << "atan  " << f << ' ' << atan(f) << ' ' << ff << endl;
 			}
 		}
 	}
@@ -315,7 +327,7 @@ int main() {
 				double ff;
 				ff=pow(pd1,pd2);
 				count++;
-				if(!compare(pow(f1,f2),ff,NEAR_EXACT9)) {
+				if(!compare(pow(f1,f2),ff,NEAR_EXACT16)) {
 					failures++;
 					cout << "pow(" << f1 << ',' << f2 << ")==" << pow(f1,f2) << "!=" << ff << endl;
 				}
