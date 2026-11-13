@@ -101,7 +101,7 @@ double pdi_to_double(pseudo_double_i x) {
 	}
 	signed_pd_internal vx=((signed_pd_internal)x)&EXP_MASK_INV;
 	uint64_t sgn=(vx<0)?0x8000000000000000ULL:0;
-	uint64_t m=(vx<0)?0-(uint64_t)vx:(uint64_t)vx;      // magnitude in [2^62,2^63]; 0x8000... is just 2^63
+	uint64_t m=(vx<0)?0-(uint64_t)vx:(uint64_t)vx;      // magnitude in [2^62,2^63)
 	int s=PD_CLZ(m);
 	m<<=s;                                               // top bit at 63: value = (m/2^63)*2^(raw-1023)
 	int32_t raw=(int32_t)(x&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS+0x3FF-1-s;
@@ -511,7 +511,7 @@ pseudo_double_i pdi_expm1(pseudo_double_i x) {
 #endif
 			return PD_NAN;
 		case 3:
-			return 0x8000000000000000ULL+PSEUDO_DOUBLE_EXP_BIAS+1;      // e^x rounds to 0, so the result is -1
+			return 0xC000000000000000ULL+PSEUDO_DOUBLE_EXP_BIAS+2;      // e^x rounds to 0, so the result is -1
 	}                                                                  // (case 1 can't happen for |x| > 1/16)
 	uint64_t s=exp2_64_fixed_inline(fraction);                         // 2^fraction, 1.63
 	// e^x - 1 = s*2^(ipart-63) - 1; |x| > 1/16 keeps the result away from 0, so absolute precision is enough
@@ -759,7 +759,7 @@ pseudo_double_i pdi_ln_1p(pseudo_double_i x) {
 		}
 		vr=log2_small_u(vx,-5-ex,ex<=-69?(vx>>63):(vx>>(-5-ex)),&exp_max);
 	} else {
-		if(vx<0 && (ex>=2 || (ex==1 && (uint64_t)vx==0x8000000000000000ULL))) {
+		if(vx<0 && ex>=2) {
 #if PD_ERROR_CHECK
 			PD_DO_ERROR_RANGE;                                         // x <= -1
 #endif
@@ -2468,13 +2468,17 @@ pseudo_double_i pdi_floor(pseudo_double_i x) {
 	int32_t exponent=(x&EXP_MASK);
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	if(e<2) {
-		return (((signed_pd_internal)x)<0)?0x8000000000000000ULL+PSEUDO_DOUBLE_EXP_BIAS+1:0;
+		return (((signed_pd_internal)x)<0)?0xC000000000000000ULL+PSEUDO_DOUBLE_EXP_BIAS+2:0; // |x| < 1: -1 or 0
 	}
 	if(e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS) {
 		return x;
 	}
 	uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e))-1;
-	return (x&~m)+exponent;
+	pseudo_double_i r=x&~m;
+	if(r==0x8000000000000000ULL) {
+		return 0xC000000000000000ULL+exponent+1;                       // a mantissa of -2^63 is -2^62 one exponent up
+	}
+	return r+exponent;
 }
 
 pseudo_double_i pdi_ceil(pseudo_double_i x) {
@@ -2482,25 +2486,14 @@ pseudo_double_i pdi_ceil(pseudo_double_i x) {
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal mantissa=x&EXP_MASK_INV;
 	if(e<2) {
-		if(e==1 && (uint64_t)mantissa==0x8000000000000000ULL) { // special test for ceil(-1)=-1
-			return x;
-		}
-		return (((signed_pd_internal)x)>0)?(1ULL<<62)+PSEUDO_DOUBLE_EXP_BIAS+2:0;
+		return (((signed_pd_internal)x)>0)?(1ULL<<62)+PSEUDO_DOUBLE_EXP_BIAS+2:0; // |x| < 1: 1 or 0
 	}
 	if(e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS) {
 		return x;
 	}
 	uint64_t m=(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e-1))-1;
 	signed_pd_internal vr=((mantissa>>1)+m)&~m;
-	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
-	vr=(signed_pd_internal)((uint64_t)vr<<leading_bits);
-	int32_t new_exponent=exponent+1-leading_bits;
-#if PD_ERROR_CHECK
-	if(new_exponent>EXP_MASK) {
-		PD_DO_ERROR_OVERFLOW;
-	}
-#endif
-	return (pseudo_double_i)(vr+new_exponent);
+	return pseudo_round_helper(vr,exponent+1,true);
 }
 
 pseudo_double_i pdi_round(pseudo_double_i x) {
@@ -2508,9 +2501,6 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 	int32_t e=exponent-PSEUDO_DOUBLE_EXP_BIAS;
 	signed_pd_internal mantissa=x&EXP_MASK_INV;
 	if(e<1) {
-		if(e==0 && (uint64_t)mantissa==0x8000000000000000ULL) { // special test for round(-0.5)=-1
-			return x+1; // hack to multiply by 2
-		}
 		return 0;
 	}
 	if(e>=PSEUDO_DOUBLE_TOTAL_BITS-PSEUDO_DOUBLE_EXP_BITS) {
@@ -2519,15 +2509,7 @@ pseudo_double_i pdi_round(pseudo_double_i x) {
 	uint64_t add=1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-e-2);
 	uint64_t m=(add<<1)-1;
 	signed_pd_internal vr=((mantissa>>1)+(mantissa>0?add:add-1))&~m;
-	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
-	vr=(signed_pd_internal)((uint64_t)vr<<leading_bits);
-	int32_t new_exponent=exponent+1-leading_bits;
-#if PD_ERROR_CHECK
-	if(new_exponent>EXP_MASK) {
-		PD_DO_ERROR_OVERFLOW;
-	}
-#endif
-	return (pseudo_double_i)(vr+new_exponent);
+	return pseudo_round_helper(vr,exponent+1,true);
 }
 
 pseudo_double_i pdi_trunc(pseudo_double_i x) {
@@ -2538,8 +2520,7 @@ pseudo_double_i pdi_trunc(pseudo_double_i x) {
 pseudo_double_i pdi_fract(pseudo_double_i x) {
 	int32_t e=(int32_t)(x&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS;            // x = vx*2^(e-64): the low 64-e bits of vx are the fraction
 	if(e<=1) {
-		// |x| < 1 (or x = 0), except for -1: mantissa -2^63 with e = 1
-		return (e==1 && (x&EXP_MASK_INV)==(1ULL<<63))?0:x;
+		return x;
 	}
 	if(e>=64-PSEUDO_DOUBLE_EXP_BITS) {
 		return 0;                                                      // no mantissa bits below the binary point: an integer
@@ -3243,3 +3224,18 @@ int pdi_format(char* buf, size_t size, pseudo_double_i x, char conv, int precisi
 int pdi_to_string(char* buf, size_t size, pseudo_double_i x) {
 	return pdi_format_point(buf,size,x,'g',-1,0,'.');
 }
+
+#if !defined(PD_HW_DIV128) && PSEUDO_DOUBLE_EXP_BITS>=8
+// pdi_div's rare path: the remainder u*2^64-a*d is in [0,8d), so step a up to the exact floor
+pseudo_double_i pdi_div_exact(unsigned_pd_internal a, unsigned_pd_internal u, unsigned_pd_internal d, unsigned_pd_internal sg, int32_t exp_max) {
+	unsigned_pd_internal rl=0-a*d;
+	unsigned_pd_internal rh=u-multu64hi(a,d)-(rl!=0);
+	while(rh!=0 || rl>=d) {
+		rh-=(rl<d);
+		rl-=d;
+		a++;
+	}
+	unsigned_pd_internal q=(a^sg)-sg-(sg&(rl!=0));
+	return pseudo_round_helper((signed_pd_internal)q,exp_max,false);
+}
+#endif

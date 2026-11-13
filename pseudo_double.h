@@ -52,9 +52,10 @@ extern "C" {
 // use this to turn off all the intrinsics and use the code in pseudo_double_portable.h
 //#define PD_FORCE_PORTABLE 1
 
-// Mantissa
-// [.1000 .. .1011] = [-0.5 .. -0.25)
+// Mantissa (two's complement, normalised on its magnitude, so x and -x have the same exponent)
+// [.1000..01 .. .1100] = (-0.5 .. -0.25]
 // [.0100 .. .0111] = [0.25 .. 0.5)
+// .1000..00 (-0.5) is never a valid mantissa, so negation is exact and never changes the exponent
 
 #define PSEUDO_DOUBLE_TOTAL_BITS 64
 
@@ -76,9 +77,9 @@ typedef int64_t signed_pd_internal;
 #define PD_CLZ(x) pd_clz64_portable(x)
 static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
-static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #elif defined(_MSC_VER) && defined(_M_X64)
 static inline int PD_CLZ(unsigned __int64 x) {unsigned long i; _BitScanReverse64(&i,x); return 63-(int)i;}
+#define PD_HW_DIV128 1
 static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {unsigned __int64 hi; _umul128(x,y,&hi); return hi;}
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {__int64 hi; _mul128(x,y,&hi); return hi;}
 static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {__int64 r; __int64 q=_div128(x,0,y,&r);return q-((r!=0)&((r^y)<0));}
@@ -87,7 +88,6 @@ static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_interna
 #define PD_CLZ(x) ((int)_CountLeadingZeros64(x))
 static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return __umulh(x,y);}
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return __mulh(x,y);}
-static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #elif defined(__SIZEOF_INT128__)
 #define PD_CLZ(x) __builtin_clzll(x)
 __extension__ typedef __int128 signed_large_pd_internal;
@@ -95,18 +95,12 @@ __extension__ typedef unsigned __int128 unsigned_large_pd_internal;
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return (signed_pd_internal)(((signed_large_pd_internal)x*y)>>64);}
 static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return (unsigned_pd_internal)(((unsigned_large_pd_internal)x*y)>>64);}
 #if defined(__x86_64__)
+#define PD_HW_DIV128 1
 // floor(x*2^64/y) with the hardware divide; remainder comes free in rdx.
 // Requires abs(x)<abs(y)/2 or (abs(x)==abs(y)/2,x and y different signs) (guaranteed by the shift right by 2 in pdi_div) so the quotient fits, otherwise idiv faults.
 static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
 	signed_pd_internal q,r;
 	__asm__("idivq %4" : "=a"(q), "=d"(r) : "a"((signed_pd_internal)0), "d"(x), "rm"(y) : "cc");
-	return q-((r!=0)&((r^y)<0));
-}
-#else
-static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
-	signed_large_pd_internal n=(signed_large_pd_internal)x*((signed_large_pd_internal)1<<64);
-	signed_pd_internal q=(signed_pd_internal)(n/y);
-	signed_pd_internal r=(signed_pd_internal)(0-(unsigned_pd_internal)q*(unsigned_pd_internal)y);  /* exact: |r|<|y| */
 	return q-((r!=0)&((r^y)<0));
 }
 #endif
@@ -115,10 +109,62 @@ static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_interna
 #define PD_CLZ(x) pd_clz64_portable(x)
 static inline unsigned_pd_internal multu64hi(unsigned_pd_internal x,unsigned_pd_internal y) {return pd_umulh_portable(x,y);}
 static inline signed_pd_internal mults64hi(signed_pd_internal x,signed_pd_internal y) {return pd_mulh_portable(x,y);}
-static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {return pd_divs64hi_portable(x,y);}
 #endif
 // high 64 bits of signed x times unsigned y (the unsigned product, corrected for x's sign); same for every platform
 static inline signed_pd_internal mulsu64hi(signed_pd_internal x,unsigned_pd_internal y) {return (signed_pd_internal)(multu64hi((unsigned_pd_internal)x,y)-(x<0?y:0));}
+
+#ifndef PD_HW_DIV128
+// floor(x*2^64/y) for targets with no 128/64 divide (ARM64, RISC-V, ...), where x/y on 128 bits calls a
+// general 128/128 routine (__divti3). Same contract as the idiv version: |x|<|y|/2, or |x|==|y|/2 with opposite signs.
+// Uses no division: a reciprocal from a table plus Newton steps, then a 2-by-1 step simplified for the zero low word
+// (Moller & Granlund, "Improved division by invariant integers", IEEE Trans. Computers 60(2), 2011, Algorithms 2 and 4).
+static const uint16_t pd_recip_table[256]={ // floor((2^19-3*2^8)/d9) for d9=256..511
+	2045,2037,2029,2021,2013,2005,1998,1990,1983,1975,1968,1960,1953,1946,1938,1931,
+	1924,1917,1910,1903,1896,1889,1883,1876,1869,1863,1856,1849,1843,1836,1830,1824,
+	1817,1811,1805,1799,1792,1786,1780,1774,1768,1762,1756,1750,1745,1739,1733,1727,
+	1722,1716,1710,1705,1699,1694,1688,1683,1677,1672,1667,1661,1656,1651,1646,1641,
+	1636,1630,1625,1620,1615,1610,1605,1600,1596,1591,1586,1581,1576,1572,1567,1562,
+	1558,1553,1548,1544,1539,1535,1530,1526,1521,1517,1513,1508,1504,1500,1495,1491,
+	1487,1483,1478,1474,1470,1466,1462,1458,1454,1450,1446,1442,1438,1434,1430,1426,
+	1422,1418,1414,1411,1407,1403,1399,1396,1392,1388,1384,1381,1377,1374,1370,1366,
+	1363,1359,1356,1352,1349,1345,1342,1338,1335,1332,1328,1325,1322,1318,1315,1312,
+	1308,1305,1302,1299,1295,1292,1289,1286,1283,1280,1276,1273,1270,1267,1264,1261,
+	1258,1255,1252,1249,1246,1243,1240,1237,1234,1231,1228,1226,1223,1220,1217,1214,
+	1211,1209,1206,1203,1200,1197,1195,1192,1189,1187,1184,1181,1179,1176,1173,1171,
+	1168,1165,1163,1160,1158,1155,1153,1150,1148,1145,1143,1140,1138,1135,1133,1130,
+	1128,1125,1123,1121,1118,1116,1113,1111,1109,1106,1104,1102,1099,1097,1095,1092,
+	1090,1088,1086,1083,1081,1079,1077,1074,1072,1070,1068,1066,1064,1061,1059,1057,
+	1055,1053,1051,1049,1047,1044,1042,1040,1038,1036,1034,1032,1030,1028,1026,1024,};
+static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_internal y) {
+	unsigned_pd_internal ux=x<0?0-(unsigned_pd_internal)x:(unsigned_pd_internal)x;
+	unsigned_pd_internal uy=y<0?0-(unsigned_pd_internal)y:(unsigned_pd_internal)y;
+	int s=PD_CLZ(uy);
+	unsigned_pd_internal d=uy<<s, u=ux<<s;                                // d normalised, u<=d/2
+	// v=floor((2^128-1)/d)-2^64
+	unsigned_pd_internal d0=d&1, d40=(d>>24)+1, d63=(d>>1)+d0;
+	unsigned_pd_internal v0=pd_recip_table[(d>>55)&255];
+	unsigned_pd_internal v1=(v0<<11)-((v0*v0*d40)>>40)-1;
+	unsigned_pd_internal v2=(v1<<13)+((v1*((1ULL<<60)-v1*d40))>>47);
+	unsigned_pd_internal e=((v2>>1)&(0-d0))-v2*d63;
+	unsigned_pd_internal v3=(multu64hi(v2,e)>>1)+(v2<<31);
+	unsigned_pd_internal lo=v3*d+d;
+	unsigned_pd_internal v=v3-(multu64hi(v3,d)+(lo<d)+d);
+	// q=floor(u*2^64/d): the estimate is exact or one too big (about 90% of the time, so the fix is branch-free)
+	unsigned_pd_internal q0=v*u, q=multu64hi(v,u)+u+1;
+	unsigned_pd_internal r=0-q*d;                                         // u*2^64-q*d, mod 2^64
+	unsigned_pd_internal m=0-(unsigned_pd_internal)(r>q0);
+	q+=m;
+	r+=m&d;
+	if(r>=d) {q++; r-=d;}                                                 // practically never
+	unsigned_pd_internal sg=0-(((unsigned_pd_internal)(x^y))>>63);        // branch-free sign: signs are often random
+	return (signed_pd_internal)((q^sg)-sg-(sg&(r!=0)));
+}
+#endif
+#if defined(__GNUC__) || defined(__clang__)
+#define PD_UNLIKELY(x) __builtin_expect(!!(x),0)
+#else
+#define PD_UNLIKELY(x) (x)
+#endif
 
 #define PSEUDO_DOUBLE_EXP_BIAS (1<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
@@ -160,55 +206,13 @@ static inline unsigned_pd_internal shift_left_unsigned(unsigned_pd_internal x, i
 }
 
 static inline pseudo_double_i pdi_neg(pseudo_double_i x) {
-	// check for special cases due to the representation range of two's complement being asymmetric:
-	// mantissa of 1000000000... can't be negated directly and will need an increase in the exponent
-	// mantissa of 0100000000... has exponent decreased after negation
-	// everything else negates as expected
-	uint32_t exponent=x&EXP_MASK;
-	unsigned_pd_internal mantissa=x&EXP_MASK_INV;
-	if((mantissa<<2)==0) {
-		// get the high order byte
-		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
-		if(hi_byte==0x80) {
-#if PD_ERROR_CHECK
-			if(exponent==EXP_MASK) {
-				PD_DO_ERROR_OVERFLOW;
-			}
-#endif
-			return (mantissa>>1)+exponent+1;
-		}
-		if(hi_byte==0x40) {
-			if(exponent==0) {
-#if PD_ERROR_CHECK
-				PD_DO_ERROR_UNDERFLOW;
-#endif
-				return (pseudo_double_i)0;
-			}
-			return (mantissa<<1)+exponent-1;
-		}
-	}
-	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
+	return (pseudo_double_i)(-(signed_pd_internal)(x&EXP_MASK_INV))+(x&EXP_MASK);
 }
 
 static inline pseudo_double_i pdi_abs(pseudo_double_i x) {
-	if(((signed_pd_internal)x)>=0) {
-		return x;
-	}
-	uint32_t exponent=x&EXP_MASK;
-	unsigned_pd_internal mantissa=x&EXP_MASK_INV;
-	if((mantissa<<2)==0) {
-		// get the high order byte
-		uint32_t hi_byte=x>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
-		if(hi_byte==0x80) {
-#if PD_ERROR_CHECK
-			if(exponent==EXP_MASK) {
-				PD_DO_ERROR_OVERFLOW;
-			}
-#endif
-			return (mantissa>>1)+exponent+1;
-		}
-	}
-	return (-(signed_pd_internal)(x&EXP_MASK_INV))+exponent;
+	signed_pd_internal m=(signed_pd_internal)(x&EXP_MASK_INV);
+	signed_pd_internal s=m>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	return (pseudo_double_i)((m^s)-s)+(x&EXP_MASK);
 }
 
 static inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
@@ -273,37 +277,25 @@ static inline pseudo_double_i pseudo_round_helper(signed_pd_internal vr,int32_t 
 		return (pseudo_double_i)0;
 	}
 	int32_t leading_bits=PD_CLZ(vr>0?vr:~vr)-1;
-	if(leading_bits>exp_max) {
-#if PD_ERROR_CHECK
-		PD_DO_ERROR_UNDERFLOW;
-#endif
-		return (pseudo_double_i)0;
-	}
+	int32_t new_exponent=exp_max-leading_bits;
 	vr=(signed_pd_internal)((unsigned_pd_internal)vr<<leading_bits);
 	signed_pd_internal vr2=(((unsigned_pd_internal)vr)+(PSEUDO_DOUBLE_HALF_ULP+(ties_even?((vr>>PSEUDO_DOUBLE_EXP_BITS)&1):1)))&EXP_MASK_INV;
-	if(((unsigned_pd_internal)vr2<<2)==0) {
-		// get the high order byte
-		uint32_t hi_byte=((unsigned_pd_internal)vr2)>>(PSEUDO_DOUBLE_TOTAL_BITS-8);
-		if(hi_byte==0x80 && vr>0) {
-			vr2=1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-2);
-			exp_max+=1;
-		}
-		if(hi_byte==0xC0) {
-			vr2=1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-1);
-			exp_max-=1;
-		}
+	if(PD_UNLIKELY(vr2==(signed_pd_internal)(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-1)))) {
+		// +2^63 (rounded up past the top) or -2^63 (a negative power of two, which the leading bit count shifts one
+		// too far, or rounded down to one): halve it, keeping vr's sign
+		vr2=(signed_pd_internal)((((unsigned_pd_internal)vr2)>>1)|(((unsigned_pd_internal)vr)&(1ULL<<(PSEUDO_DOUBLE_TOTAL_BITS-1))));
+		new_exponent+=1;
 	}
-	int32_t new_exponent=exp_max-leading_bits;
+	if(PD_UNLIKELY((uint32_t)new_exponent>(uint32_t)EXP_MASK)) { // one test for both ends of the range
+		if(new_exponent<0) {
 #if PD_ERROR_CHECK
-	if(new_exponent>EXP_MASK) {
+			PD_DO_ERROR_UNDERFLOW;
+#endif
+			return (pseudo_double_i)0;
+		}
+#if PD_ERROR_CHECK
 		PD_DO_ERROR_OVERFLOW;
-	}
 #endif
-	if(new_exponent<0) {
-#if PD_ERROR_CHECK
-		PD_DO_ERROR_UNDERFLOW;
-#endif
-		return (pseudo_double_i)0;
 	}
 	return (pseudo_double_i)((vr2&EXP_MASK_INV)+new_exponent);
 }
@@ -357,6 +349,48 @@ static inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	return pseudo_round_helper(vr,expx+expy-PSEUDO_DOUBLE_EXP_BIAS,(uint64_t)vx*(uint64_t)vy==0);
 }
 
+#if !defined(PD_HW_DIV128) && PSEUDO_DOUBLE_EXP_BITS>=8
+// Division without a 128/64 divide. A 64-bit divide gives a reciprocal good to about 31 bits, and one Goldschmidt
+// step takes the quotient to within 8 below the exact one. That rounds the same way as the exact quotient unless a
+// rounding boundary lies in between, which the low bits show; only then (1-5% of calls) is the exact quotient
+// worked out. Needs at least 8 exponent bits.
+// Rare path of pdi_div (in pseudo_double.c): a<=u*2^64/d<a+8, made exact, signed by sg and rounded
+pseudo_double_i pdi_div_exact(unsigned_pd_internal a, unsigned_pd_internal u, unsigned_pd_internal d, unsigned_pd_internal sg, int32_t exp_max);
+static inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
+	int32_t expx=x&EXP_MASK;
+	int32_t expy=y&EXP_MASK;
+	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
+	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
+	if(vy==0) { // leave this one in to avoid division by zero signal
+		PD_DO_ERROR_RANGE;
+		return PD_NAN;
+	}
+	int32_t exp_max=expx-expy+PSEUDO_DOUBLE_EXP_BIAS+2;
+	unsigned_pd_internal ux=vx<0?0-(unsigned_pd_internal)vx:(unsigned_pd_internal)vx;   // |vx|<2^63 (|vx|/4 is the dividend)
+	unsigned_pd_internal uy=vy<0?0-(unsigned_pd_internal)vy:(unsigned_pd_internal)vy;   // in [2^62,2^63)
+	unsigned_pd_internal d=uy<<1;                       // D=d/2^63 in [1,2)
+	unsigned_pd_internal u2=ux;                         // 2u, where the exact quotient is T=u*2^64/d<2^63
+	// R=floor((2^64-1)/((d>>32)+1))/2^33 <= 1/D; eps=1-D*R < 1.5*2^-31, as 0.64 rounded down
+	unsigned_pd_internal r=((~(unsigned_pd_internal)0)/((d>>32)+1))<<31;
+	unsigned_pd_internal ph=multu64hi(d,r), pl=d*r;
+	unsigned_pd_internal e=(((1ULL<<63)-ph-(pl!=0))<<1)|((0-pl)>>63);
+	unsigned_pd_internal a=multu64hi(u2,r);             // T*(1-eps), rounded down
+	a+=multu64hi(a,e);                                  // T*(1-eps^2), rounded down: T-7.01 < a <= T
+	unsigned_pd_internal sg=0-(((unsigned_pd_internal)(vx^vy))>>63);
+	unsigned_pd_internal q=(a^sg)-sg;                   // exact floor is in [q,q+7] (q>=0) or [q-8,q] (q<0)
+	// The rounding step for this quotient: pseudo_round_helper drops EXP_BITS-lb bits, where lb is 0, 1 or 2 as
+	// T>=2^62, T>=2^61 or less. Found from the operands, so off the critical path; near the power of two where lb
+	// changes, both sides round to that power of two, so the choice there does not matter.
+	int lb=(int)(u2<(d>>1))+(int)(u2<(d>>2));
+	unsigned_pd_internal cell=(1ULL<<PSEUDO_DOUBLE_EXP_BITS)>>lb;
+	// distance from a to the next rounding boundary, on the side the exact quotient lies (above a, so below -a)
+	unsigned_pd_internal w=((cell>>1)-1-a-sg)&(cell-1);
+	if(w<8) {
+		return pdi_div_exact(a,u2>>1,d,sg,exp_max);
+	}
+	return pseudo_round_helper((signed_pd_internal)q,exp_max,false);
+}
+#else
 static inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	int32_t expx=x&EXP_MASK;
 	int32_t expy=y&EXP_MASK;
@@ -369,6 +403,7 @@ static inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
 	signed_pd_internal vr=divs64hi(vx>>2,vy);
 	return pseudo_round_helper(vr,expx-expy+PSEUDO_DOUBLE_EXP_BIAS+2,false);
 }
+#endif
 
 static inline pseudo_double_i pdi_ldexp(pseudo_double_i x, int y) {
 	if(x==0) {
@@ -396,66 +431,6 @@ double pdi_to_double(pseudo_double_i d);
 int64_t pdi_to_int64(pseudo_double_i d);
 uint64_t pdi_to_uint64(pseudo_double_i d);
 
-// // // (r*2^64+lo)/10 for r<10, portable: two 64/32 steps
-// // static inline uint64_t div10_128(uint64_t r, uint64_t lo) {
-// // 	uint64_t x=(r<<32)|(lo>>32);
-// // 	uint64_t qh=x/10, r2=x%10;
-// // 	uint64_t y=(r2<<32)|(lo&0xFFFFFFFFu);
-// // 	return (qh<<32)|(y/10);
-// // }
-// //
-// // // // value = (mhi:mlo)*10^e, negated if negative, rounded once. sticky means non-zero digits after the mantissa were
-// // // // dropped (so the mantissa is slightly below the true value). Rounds to nearest, ties to even when the value is
-// // // // exact, like strtod.
-// // // static inline pseudo_double_i decimal_to_pdi(uint64_t mhi, uint64_t mlo, bool negative, int32_t e, bool sticky) {
-// // // 	if(mhi==0 && mlo==0) {
-// // // 		return 0;
-// // // 	}
-// // // 	// value = (hi + lo/2^64)*2^nexp, hi normalised to bit 63
-// // // 	uint64_t hi,lo;
-// // // 	int32_t nexp;
-// // // 	if(mhi==0) {
-// // // 		int c=PD_CLZ(mlo);
-// // // 		hi=mlo<<c;
-// // // 		lo=0;
-// // // 		nexp=-c;
-// // // 	} else {
-// // // 		int c=PD_CLZ(mhi);
-// // // 		hi=c==0?mhi:(mhi<<c)|(mlo>>(64-c));
-// // // 		lo=mlo<<c;
-// // // 		nexp=64-c;
-// // // 	}
-// // // 	uint64_t dropped=sticky;  // non-zero if bits have been dropped, so (hi:lo) is a floor
-// // // 	while(e>0) { // (hi:lo)*10, keeping the top 128 bits
-// // // 		uint64_t lo_lo=lo*10, lo_hi=multu64hi(lo,10);
-// // // 		uint64_t hi_lo=hi*10, top=multu64hi(hi,10);
-// // // 		uint64_t mid=hi_lo+lo_hi;
-// // // 		top+=(mid<hi_lo);
-// // // 		int s=64-PD_CLZ(top); // 3 or 4, since top is 4..9
-// // // 		dropped|=lo_lo<<(64-s);
-// // // 		hi=(top<<(64-s))|(mid>>s);
-// // // 		lo=(mid<<(64-s))|(lo_lo>>s);
-// // // 		nexp+=s;
-// // // 		e--;
-// // // 	}
-// // // 	while(e<0) { // (hi:lo)/10 by long division
-// // // 		uint64_t q1=hi/10, q0=div10_128(hi%10,lo);
-// // // 		dropped|=lo-q0*10;        // the remainder (it is below 10, so its low 64 bits are all of it)
-// // // 		int s=PD_CLZ(q1); // 3 or 4
-// // // 		hi=(q1<<s)|(q0>>(64-s));
-// // // 		lo=q0<<s;
-// // // 		nexp-=s;
-// // // 		e++;
-// // // 	}
-// // // 	dropped|=(hi&1)|lo;       // dropped by the shift below
-// // // 	// hi>>1 is a positive normalised mantissa; if bits were dropped it is a floor, so half up is correct
-// // // 	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,dropped==0);
-// // // 	return negative?pdi_neg(r):r;
-// // // }
-// // //
-// // // static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
-// // // 	return decimal_to_pdi(0,d<0?0-(uint64_t)d:(uint64_t)d,d<0,e,false);
-// // // }
 pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e);
 pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e);
 int64_t pdi_to_int64fixed2(pseudo_double_i d, int32_t e);
@@ -518,7 +493,7 @@ uint64_t inv_sqrt64_fixed(uint64_t x);
 uint64_t exp2_64_fixed(uint64_t x);
 
 // x is a 0.64 unsigned fixed in the range [0,1)
-// calculate ln2(x+1)
+// calculate log2(x+1)
 // result is 0.64 unsigned fixed in the range [0,1)
 uint64_t log2_64_fixed(uint64_t x);
 
@@ -617,6 +592,34 @@ static inline bool pd_lte_zero(pseudo_double x) {return (((signed_pd_internal)x.
 static inline bool pd_eq_zero(pseudo_double x) {return (x.val==0);}
 static inline bool pd_neq_zero(pseudo_double x) {return (x.val!=0);}
 static inline pseudo_double string_to_pd(const char* str) {return create_pseudo_double_from_internal(string_to_pdi(str));}
+static inline pseudo_double pd_expm1(pseudo_double x) {return create_pseudo_double_from_internal(pdi_expm1(x.val));}
+static inline pseudo_double pd_ln_1p(pseudo_double x) {return create_pseudo_double_from_internal(pdi_ln_1p(x.val));}
+static inline pseudo_double pd_powi(pseudo_double x, int32_t n) {return create_pseudo_double_from_internal(pdi_powi(x.val,n));}
+static inline void pd_sin_cos_rev(pseudo_double x, pseudo_double* sin_out, pseudo_double* cos_out) {pdi_sin_cos_rev(x.val,&sin_out->val,&cos_out->val);}
+static inline void pd_sin_cos(pseudo_double x, pseudo_double* sin_out, pseudo_double* cos_out) {pdi_sin_cos(x.val,&sin_out->val,&cos_out->val);}
+static inline pseudo_double pd_atan_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan_rev(x.val));}
+static inline pseudo_double pd_atan(pseudo_double x) {return create_pseudo_double_from_internal(pdi_atan(x.val));}
+static inline pseudo_double pd_asin_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_asin_rev(x.val));}
+static inline pseudo_double pd_acos_rev(pseudo_double x) {return create_pseudo_double_from_internal(pdi_acos_rev(x.val));}
+static inline pseudo_double pd_asin(pseudo_double x) {return create_pseudo_double_from_internal(pdi_asin(x.val));}
+static inline pseudo_double pd_acos(pseudo_double x) {return create_pseudo_double_from_internal(pdi_acos(x.val));}
+static inline pseudo_double pd_sinh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_sinh(x.val));}
+static inline pseudo_double pd_cosh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cosh(x.val));}
+static inline pseudo_double pd_tanh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_tanh(x.val));}
+static inline pseudo_double pd_asinh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_asinh(x.val));}
+static inline pseudo_double pd_acosh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_acosh(x.val));}
+static inline pseudo_double pd_atanh(pseudo_double x) {return create_pseudo_double_from_internal(pdi_atanh(x.val));}
+static inline pseudo_double pd_cbrt(pseudo_double x) {return create_pseudo_double_from_internal(pdi_cbrt(x.val));}
+static inline pseudo_double pd_fract(pseudo_double x) {return create_pseudo_double_from_internal(pdi_fract(x.val));}
+static inline pseudo_double pd_hypot(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_hypot(x.val,y.val));}
+static inline pseudo_double pd_hypot3(pseudo_double x, pseudo_double y, pseudo_double z) {return create_pseudo_double_from_internal(pdi_hypot3(x.val,y.val,z.val));}
+static inline pseudo_double pd_inv_hypot(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_inv_hypot(x.val,y.val));}
+static inline pseudo_double pd_inv_hypot3(pseudo_double x, pseudo_double y, pseudo_double z) {return create_pseudo_double_from_internal(pdi_inv_hypot3(x.val,y.val,z.val));}
+static inline pseudo_double pd_mul_add(pseudo_double a, pseudo_double b, pseudo_double c) {return create_pseudo_double_from_internal(pdi_mul_add(a.val,b.val,c.val));}
+static inline pseudo_double pd_mul_sub(pseudo_double a, pseudo_double b, pseudo_double c) {return create_pseudo_double_from_internal(pdi_mul_sub(a.val,b.val,c.val));}
+static inline pseudo_double pd_sub_mul(pseudo_double a, pseudo_double b, pseudo_double c) {return create_pseudo_double_from_internal(pdi_sub_mul(a.val,b.val,c.val));}
+static inline int pd_to_string(char* buf, size_t size, pseudo_double x) {return pdi_to_string(buf,size,x.val);}
+static inline int pd_format(char* buf, size_t size, pseudo_double x, char conv, int precision, int flags) {return pdi_format(buf,size,x.val,conv,precision,flags);}
 
 #ifdef __cplusplus
 }
