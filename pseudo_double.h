@@ -31,6 +31,7 @@
 #define PSEUDO_DOUBLE_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #ifdef _MSC_VER
@@ -317,21 +318,14 @@ static inline pseudo_double_i pdi_add(pseudo_double_i x, pseudo_double_i y) {
 	if(ydiffx<=-(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return x;
 	}
-	int32_t exp_max;
 	signed_pd_internal vx=((signed_pd_internal)(x&EXP_MASK_INV))>>1;
 	signed_pd_internal vy=((signed_pd_internal)(y&EXP_MASK_INV))>>1;
-	if(ydiffx>=0) {
-		exp_max=expy;
-		vx>>=ydiffx;
-	} else {
-		exp_max=expx;
-		vy>>=-ydiffx;
-	}
-	exp_max+=1;
-	if(ydiffx>=PSEUDO_DOUBLE_EXP_BITS || ydiffx<=-PSEUDO_DOUBLE_EXP_BITS) {
-		return pseudo_round_helper(vx+vy,exp_max,false); // bits lost: floor, so half up
-	}
-	return pseudo_round_helper(vx+vy,exp_max,true); // exact sum: ties to even
+	bool y_big=ydiffx>=0;                                              // selects rather than branches: GCC turns these into cmovs
+	signed_pd_internal big=y_big?vy:vx, small=y_big?vx:vy;
+	int32_t shift=y_big?ydiffx:-ydiffx;                                // 0..62
+	int32_t exp_max=(y_big?expy:expx)+1;
+	unsigned_pd_internal lost=((unsigned_pd_internal)small<<1)<<(63-shift); // the bits shifted out (0 for a shift of 0)
+	return pseudo_round_helper(big+(small>>shift),exp_max,lost==0);   // bits lost: floor, so half up; exact: ties to even
 }
 
 static inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
@@ -344,22 +338,14 @@ static inline pseudo_double_i pdi_sub(pseudo_double_i x, pseudo_double_i y) {
 	if(ydiffx<=-(PSEUDO_DOUBLE_TOTAL_BITS-1)) {
 		return x;
 	}
-	int32_t exp_max;
 	signed_pd_internal vx=((signed_pd_internal)(x&EXP_MASK_INV))>>1;
-	signed_pd_internal vy=((signed_pd_internal)(y&EXP_MASK_INV))>>1;
-	vy=-vy;
-	if(ydiffx>=0) {
-		exp_max=expy;
-		vx>>=ydiffx;
-	} else {
-		exp_max=expx;
-		vy>>=-ydiffx;
-	}
-	exp_max+=1;
-	if(ydiffx>=PSEUDO_DOUBLE_EXP_BITS || ydiffx<=-PSEUDO_DOUBLE_EXP_BITS) {
-		return pseudo_round_helper(vx+vy,exp_max,false); // bits lost: floor, so half up
-	}
-	return pseudo_round_helper(vx+vy,exp_max,true); // exact sum: ties to even
+	signed_pd_internal vy=-(((signed_pd_internal)(y&EXP_MASK_INV))>>1);
+	bool y_big=ydiffx>=0;
+	signed_pd_internal big=y_big?vy:vx, small=y_big?vx:vy;
+	int32_t shift=y_big?ydiffx:-ydiffx;
+	int32_t exp_max=(y_big?expy:expx)+1;
+	unsigned_pd_internal lost=((unsigned_pd_internal)small<<1)<<(63-shift);
+	return pseudo_round_helper(big+(small>>shift),exp_max,lost==0);
 }
 
 static inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
@@ -368,7 +354,7 @@ static inline pseudo_double_i pdi_mult(pseudo_double_i x, pseudo_double_i y) {
 	signed_pd_internal vx=(signed_pd_internal)(x&EXP_MASK_INV);
 	signed_pd_internal vy=(signed_pd_internal)(y&EXP_MASK_INV);
 	signed_pd_internal vr=mults64hi(vx,vy);
-	return pseudo_round_helper(vr,expx+expy-PSEUDO_DOUBLE_EXP_BIAS,false);
+	return pseudo_round_helper(vr,expx+expy-PSEUDO_DOUBLE_EXP_BIAS,(uint64_t)vx*(uint64_t)vy==0);
 }
 
 static inline pseudo_double_i pdi_div(pseudo_double_i x, pseudo_double_i y) {
@@ -410,67 +396,67 @@ double pdi_to_double(pseudo_double_i d);
 int64_t pdi_to_int64(pseudo_double_i d);
 uint64_t pdi_to_uint64(pseudo_double_i d);
 
-// (r*2^64+lo)/10 for r<10, portable: two 64/32 steps
-static inline uint64_t div10_128(uint64_t r, uint64_t lo) {
-	uint64_t x=(r<<32)|(lo>>32);
-	uint64_t qh=x/10, r2=x%10;
-	uint64_t y=(r2<<32)|(lo&0xFFFFFFFFu);
-	return (qh<<32)|(y/10);
-}
-
-// value = (mhi:mlo)*10^e, negated if negative, rounded once. sticky means non-zero digits after the mantissa were
-// dropped (so the mantissa is slightly below the true value). Rounds to nearest, ties to even when the value is
-// exact, like strtod.
-static inline pseudo_double_i decimal_to_pdi(uint64_t mhi, uint64_t mlo, bool negative, int32_t e, bool sticky) {
-	if(mhi==0 && mlo==0) {
-		return 0;
-	}
-	// value = (hi + lo/2^64)*2^nexp, hi normalised to bit 63
-	uint64_t hi,lo;
-	int32_t nexp;
-	if(mhi==0) {
-		int c=PD_CLZ(mlo);
-		hi=mlo<<c;
-		lo=0;
-		nexp=-c;
-	} else {
-		int c=PD_CLZ(mhi);
-		hi=c==0?mhi:(mhi<<c)|(mlo>>(64-c));
-		lo=mlo<<c;
-		nexp=64-c;
-	}
-	uint64_t dropped=sticky;  // non-zero if bits have been dropped, so (hi:lo) is a floor
-	while(e>0) { // (hi:lo)*10, keeping the top 128 bits
-		uint64_t lo_lo=lo*10, lo_hi=multu64hi(lo,10);
-		uint64_t hi_lo=hi*10, top=multu64hi(hi,10);
-		uint64_t mid=hi_lo+lo_hi;
-		top+=(mid<hi_lo);
-		int s=64-PD_CLZ(top); // 3 or 4, since top is 4..9
-		dropped|=lo_lo<<(64-s);
-		hi=(top<<(64-s))|(mid>>s);
-		lo=(mid<<(64-s))|(lo_lo>>s);
-		nexp+=s;
-		e--;
-	}
-	while(e<0) { // (hi:lo)/10 by long division
-		uint64_t q1=hi/10, q0=div10_128(hi%10,lo);
-		dropped|=lo-q0*10;        // the remainder (it is below 10, so its low 64 bits are all of it)
-		int s=PD_CLZ(q1); // 3 or 4
-		hi=(q1<<s)|(q0>>(64-s));
-		lo=q0<<s;
-		nexp-=s;
-		e++;
-	}
-	dropped|=(hi&1)|lo;       // dropped by the shift below
-	// hi>>1 is a positive normalised mantissa; if bits were dropped it is a floor, so half up is correct
-	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,dropped==0);
-	return negative?pdi_neg(r):r;
-}
-
-static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
-	return decimal_to_pdi(0,d<0?0-(uint64_t)d:(uint64_t)d,d<0,e,false);
-}
-
+// // // (r*2^64+lo)/10 for r<10, portable: two 64/32 steps
+// // static inline uint64_t div10_128(uint64_t r, uint64_t lo) {
+// // 	uint64_t x=(r<<32)|(lo>>32);
+// // 	uint64_t qh=x/10, r2=x%10;
+// // 	uint64_t y=(r2<<32)|(lo&0xFFFFFFFFu);
+// // 	return (qh<<32)|(y/10);
+// // }
+// //
+// // // // value = (mhi:mlo)*10^e, negated if negative, rounded once. sticky means non-zero digits after the mantissa were
+// // // // dropped (so the mantissa is slightly below the true value). Rounds to nearest, ties to even when the value is
+// // // // exact, like strtod.
+// // // static inline pseudo_double_i decimal_to_pdi(uint64_t mhi, uint64_t mlo, bool negative, int32_t e, bool sticky) {
+// // // 	if(mhi==0 && mlo==0) {
+// // // 		return 0;
+// // // 	}
+// // // 	// value = (hi + lo/2^64)*2^nexp, hi normalised to bit 63
+// // // 	uint64_t hi,lo;
+// // // 	int32_t nexp;
+// // // 	if(mhi==0) {
+// // // 		int c=PD_CLZ(mlo);
+// // // 		hi=mlo<<c;
+// // // 		lo=0;
+// // // 		nexp=-c;
+// // // 	} else {
+// // // 		int c=PD_CLZ(mhi);
+// // // 		hi=c==0?mhi:(mhi<<c)|(mlo>>(64-c));
+// // // 		lo=mlo<<c;
+// // // 		nexp=64-c;
+// // // 	}
+// // // 	uint64_t dropped=sticky;  // non-zero if bits have been dropped, so (hi:lo) is a floor
+// // // 	while(e>0) { // (hi:lo)*10, keeping the top 128 bits
+// // // 		uint64_t lo_lo=lo*10, lo_hi=multu64hi(lo,10);
+// // // 		uint64_t hi_lo=hi*10, top=multu64hi(hi,10);
+// // // 		uint64_t mid=hi_lo+lo_hi;
+// // // 		top+=(mid<hi_lo);
+// // // 		int s=64-PD_CLZ(top); // 3 or 4, since top is 4..9
+// // // 		dropped|=lo_lo<<(64-s);
+// // // 		hi=(top<<(64-s))|(mid>>s);
+// // // 		lo=(mid<<(64-s))|(lo_lo>>s);
+// // // 		nexp+=s;
+// // // 		e--;
+// // // 	}
+// // // 	while(e<0) { // (hi:lo)/10 by long division
+// // // 		uint64_t q1=hi/10, q0=div10_128(hi%10,lo);
+// // // 		dropped|=lo-q0*10;        // the remainder (it is below 10, so its low 64 bits are all of it)
+// // // 		int s=PD_CLZ(q1); // 3 or 4
+// // // 		hi=(q1<<s)|(q0>>(64-s));
+// // // 		lo=q0<<s;
+// // // 		nexp-=s;
+// // // 		e++;
+// // // 	}
+// // // 	dropped|=(hi&1)|lo;       // dropped by the shift below
+// // // 	// hi>>1 is a positive normalised mantissa; if bits were dropped it is a floor, so half up is correct
+// // // 	pseudo_double_i r=pseudo_round_helper((signed_pd_internal)(hi>>1),nexp+65+PSEUDO_DOUBLE_EXP_BIAS,dropped==0);
+// // // 	return negative?pdi_neg(r):r;
+// // // }
+// // //
+// // // static inline pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e) {
+// // // 	return decimal_to_pdi(0,d<0?0-(uint64_t)d:(uint64_t)d,d<0,e,false);
+// // // }
+pseudo_double_i int64fixed10_to_pdi(int64_t d, int32_t e);
 pseudo_double_i int64fixed2_to_pdi(int64_t d, int32_t e);
 int64_t pdi_to_int64fixed2(pseudo_double_i d, int32_t e);
 
@@ -495,6 +481,32 @@ pseudo_double_i pdi_sin(pseudo_double_i x);
 pseudo_double_i pdi_cos(pseudo_double_i x);
 pseudo_double_i pdi_tan(pseudo_double_i x);
 pseudo_double_i pdi_atan2(pseudo_double_i y, pseudo_double_i x);
+pseudo_double_i pdi_expm1(pseudo_double_i x);
+pseudo_double_i pdi_ln_1p(pseudo_double_i x);
+pseudo_double_i pdi_powi(pseudo_double_i x, int32_t n);
+void pdi_sin_cos_rev(pseudo_double_i x, pseudo_double_i* sin_out, pseudo_double_i* cos_out);
+void pdi_sin_cos(pseudo_double_i x, pseudo_double_i* sin_out, pseudo_double_i* cos_out);
+pseudo_double_i pdi_atan_rev(pseudo_double_i x);
+pseudo_double_i pdi_atan(pseudo_double_i x);
+pseudo_double_i pdi_asin_rev(pseudo_double_i x);
+pseudo_double_i pdi_acos_rev(pseudo_double_i x);
+pseudo_double_i pdi_asin(pseudo_double_i x);
+pseudo_double_i pdi_acos(pseudo_double_i x);
+pseudo_double_i pdi_sinh(pseudo_double_i x);
+pseudo_double_i pdi_cosh(pseudo_double_i x);
+pseudo_double_i pdi_tanh(pseudo_double_i x);
+pseudo_double_i pdi_asinh(pseudo_double_i x);
+pseudo_double_i pdi_acosh(pseudo_double_i x);
+pseudo_double_i pdi_atanh(pseudo_double_i x);
+pseudo_double_i pdi_cbrt(pseudo_double_i x);
+pseudo_double_i pdi_fract(pseudo_double_i x);
+pseudo_double_i pdi_hypot(pseudo_double_i x, pseudo_double_i y);
+pseudo_double_i pdi_hypot3(pseudo_double_i x, pseudo_double_i y, pseudo_double_i z);
+pseudo_double_i pdi_inv_hypot(pseudo_double_i x, pseudo_double_i y);
+pseudo_double_i pdi_inv_hypot3(pseudo_double_i x, pseudo_double_i y, pseudo_double_i z);
+pseudo_double_i pdi_mul_add(pseudo_double_i a, pseudo_double_i b, pseudo_double_i c); // a*b+c
+pseudo_double_i pdi_mul_sub(pseudo_double_i a, pseudo_double_i b, pseudo_double_i c); // a*b-c
+pseudo_double_i pdi_sub_mul(pseudo_double_i a, pseudo_double_i b, pseudo_double_i c); // c-a*b
 pseudo_double_i string_to_pdi(const char* str);
 
 // x is a 2.62 unsigned fixed in the range (1,4)
@@ -505,22 +517,42 @@ uint64_t inv_sqrt64_fixed(uint64_t x);
 // result is 2.62 unsigned fixed in the range [1,2)
 uint64_t exp2_64_fixed(uint64_t x);
 
-// x is a 1.63 unsigned fixed in the range [0,1)
+// x is a 0.64 unsigned fixed in the range [0,1)
 // calculate ln2(x+1)
-// result is 1.63 unsigned fixed in the range [0,1)
+// result is 0.64 unsigned fixed in the range [0,1)
 uint64_t log2_64_fixed(uint64_t x);
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate sin_rev(x)
+// calculate sin with x in quarter turns
 // result is 2.62 unsigned fixed in the range [0,1]
 uint64_t sin_rev_64_fixed(uint64_t x);
 
 // x is a 2.62 unsigned fixed in the range [0,1]
-// calculate atan_rev(x)
+// calculate atan with x in eighth turns
 // result is 2.62 unsigned fixed in the range [0,1]
 uint64_t atan_rev_64_fixed(uint64_t x);
 
-void debug_pdi_output(pseudo_double_i d);
+// x is a 2.62 unsigned fixed in the range [0,1] (quarter turns)
+// sets sin and cos of x quarter turns, as 2.62 unsigned fixed in the range [0,1]
+void sin_cos_rev_64_fixed(uint64_t x, uint64_t* sin_out, uint64_t* cos_out);
+
+// x is a 3.61 unsigned fixed in the range [1,8)
+// result is x^(-1/3) as 1.63 unsigned fixed in the range (0.5,1]
+uint64_t inv_cbrt64_fixed(uint64_t x);
+
+#define PD_FMT_PLUS 1    // '+': always write a sign
+#define PD_FMT_SPACE 2   // ' ': a space where a plus sign would go
+#define PD_FMT_ALT 4     // '#': always write the decimal point, and %g keeps its trailing zeros
+
+// Formats x as printf's %.{precision}{conv} does, for conv 'e', 'f', 'g' (or 'E', 'F', 'G'), with PD_FMT_ flags,
+// into buf (size bytes, NUL terminated when size > 0). A negative precision means the shortest digits that read back
+// as x ('g' then takes fixed or scientific, whichever is shorter, as std::to_chars does). Returns the length the
+// whole result needs, as snprintf does. Correctly rounded, ties to even when exact
+int pdi_format(char* buf, size_t size, pseudo_double_i x, char conv, int precision, int flags);
+// the same, with point as the decimal point character
+int pdi_format_point(char* buf, size_t size, pseudo_double_i x, char conv, int precision, int flags, char point);
+// the shortest string that reads back as x with string_to_pdi (32 bytes is always enough)
+int pdi_to_string(char* buf, size_t size, pseudo_double_i x);
 
 /* =========================================================================================================================================================================
  * below this line is the C wrapper

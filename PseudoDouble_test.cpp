@@ -137,13 +137,13 @@ int main() {
 			}
 			ff=pd1-pd2;
 			count++;
-			if(!compare(f1-f2,ff,NEAR_EXACT16)) {
+			if(!compare(f1-f2,ff,EXACT)) {
 				failures++;
 				cout << "sub  " << f1 << '-' << f2 << "==" << f1-f2 << "!=" << ff << endl; // std::hex << ' ' << pd1.val << '-' << pd2.val << '=' << (pd1-pd2).val << std::dec << endl;
 			}
 			ff=pd1*pd2;
 			count++;
-			if(!compare(f1*f2,ff,NEAR_EXACT16)) {
+			if(!compare(f1*f2,ff,EXACT)) {
 				failures++;
 				cout << "mult " << f1 << '*' << f2 << "==" << f1*f2 << "!=" << ff << endl;
 			}
@@ -264,6 +264,12 @@ int main() {
 					failures++;
 					cout << "exp  " << setprecision(15) << f << ' ' << setprecision(15) << exp(f) << ' ' << setprecision(15) << ff << endl;
 				}
+				ff=expm1(pd);
+				count++;
+				if(!compare(expm1(f),ff,EXACT)) {
+					failures++;
+					cout << "expm1  " << setprecision(15) << f << ' ' << setprecision(15) << expm1(f) << ' ' << setprecision(15) << ff << endl;
+				}
 			}
 		}
 		if(f>0) {
@@ -290,6 +296,14 @@ int main() {
 				cout << "log10  " << setprecision(15) << f << ' ' << setprecision(15) << log10(f) << ' ' << setprecision(15) << ff << endl;
 			}
 		}
+		if(f>-1) {
+			ff=logp1(pd);
+			count++;
+			if(!compare(logp1(f),ff,EXACT)) {
+				failures++;
+				cout << "logp1  " << setprecision(15) << f << ' ' << setprecision(15) << logp1(f) << ' ' << setprecision(15) << ff << endl;
+			}
+		}
 		if(-10000.0<f && f<10000.0) {
 			ff=sin(pd);
 			count++;
@@ -309,11 +323,25 @@ int main() {
 				failures++;
 				cout << "tan  " << f << ' ' << tan(f) << ' ' << ff << endl;
 			}
-			ff=atan(pd);
+		}
+		ff=atan(pd);
+		count++;
+		if(!compare(atan(f),ff,EXACT)) {
+			failures++;
+			cout << "atan  " << f << ' ' << atan(f) << ' ' << ff << endl;
+		}
+		if(-1.0<f && f<1.0) {
+			ff=asin(pd);
 			count++;
-			if(!compare(atan(f),ff,EXACT)) {
+			if(!compare(asin(f),ff,EXACT)) {
 				failures++;
-				cout << "atan  " << f << ' ' << atan(f) << ' ' << ff << endl;
+				cout << "asin  " << f << ' ' << asin(f) << ' ' << ff << endl;
+			}
+			ff=acos(pd);
+			count++;
+			if(!compare(acos(f),ff,EXACT)) {
+				failures++;
+				cout << "acos  " << f << ' ' << acos(f) << ' ' << ff << endl;
 			}
 		}
 	}

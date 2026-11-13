@@ -192,11 +192,11 @@ See Functions.md for details of all the provided functions.
 
 * **Basic operators:** +, - (both unary and binary), *, /, ==, !=, >, >=, <, <=
 
-* **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, atan2, abs, fabs
+* **Functions matching <math.h>**: floor, ceil, round, sqrt, ldexp, exp2, exp, log2, log, log10, pow, sin, cos, tan, acos, asin, atan, atan2, abs, fabs
 
 * **Functions not found in <math.h>**: max, min, inv_sqrt, sin_rev, cos_rev, atan2_rev, conversion to and from doubles, pseudo-double creation
 
-* **Functions not currently supported by pseudo-double**:  acos, asin, tan, atan, hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
+* **Functions not currently supported by pseudo-double**:  hyperbolic trigonometry, frexp, expm1, ilogb, log1p, logb, scalbn, scalbln, cbrt, hypot, erf, erfc, tgamma, lgamma, fmod, trunc, lround, llround, rint, lrint, llrint, nearbyint, remainder, remquot, copysign, nan, nextafter, nexttoward, fdim, fmax, fmin, fma, fpclassify, signbit, isfinite, isinf, isnan, isnormal, all the comparison macros.
 
 # Overflows
 
