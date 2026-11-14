@@ -96,7 +96,7 @@ double pdi_to_double(pseudo_double_i x) {
 	if(x==0) {
 		return 0.0;
 	}
-	if(x==PD_NAN) {
+	if(pdi_is_nan(x)) {
 		return NAN;
 	}
 	signed_pd_internal vx=((signed_pd_internal)x)&EXP_MASK_INV;
@@ -1402,6 +1402,9 @@ static inline pseudo_double_i atan2_core(uint64_t ma, int32_t ea, uint64_t mb, i
 
 // atan2(y,x) in turns, in (-1/2,1/2], times k*2^(kexp-63) (k=0 for turns), with a single rounding at the end
 static inline pseudo_double_i pdi_atan2_scaled(pseudo_double_i y, pseudo_double_i x, int64_t k, int32_t kexp) {
+	if(pdi_is_nan(y) || pdi_is_nan(x)) {
+		return PD_NAN;                                                  // only to avoid a divide fault on x86
+	}
 	int negative=0;        // boolean: atan(r) is subtracted from add_const
 	int64_t add_const;     // in eighth turns, scaled by 2^60
 	int y_negative=0;      // boolean: q5-q8 are q4-q1 mirrored, so work with |y| and negate the result at the end
@@ -1509,6 +1512,9 @@ static inline pseudo_double_i pdi_asin_scaled(pseudo_double_i x, int64_t k, int3
 	if(x==0) {
 		return 0;
 	}
+	if(pdi_is_nan(x)) {
+		return PD_NAN; // only to avoid a divide fault on x86
+	}
 	int x_negative=((signed_pd_internal)x)<0;
 	pseudo_double_i a=x_negative?pdi_neg(x):x;
 	uint64_t ma=(uint64_t)(a&EXP_MASK_INV), ms;
@@ -1529,6 +1535,9 @@ static inline pseudo_double_i pdi_asin_scaled(pseudo_double_i x, int64_t k, int3
 static inline pseudo_double_i pdi_acos_scaled(pseudo_double_i x, int64_t k, int32_t kexp) {
 	if(x==0) {
 		return atan2_core(0,0,1ULL<<62,PSEUDO_DOUBLE_EXP_BIAS+2,2LL<<60,0,k,kexp); // exactly 1/4
+	}
+	if(pdi_is_nan(x)) {
+		return PD_NAN; // only to avoid a divide fault on x86
 	}
 	int x_negative=((signed_pd_internal)x)<0;
 	pseudo_double_i a=x_negative?pdi_neg(x):x;
@@ -1972,6 +1981,9 @@ pseudo_double_i pdi_tanh(pseudo_double_i x) {
 	if(x==0) {
 		return 0;
 	}
+	if(pdi_is_nan(x)) {
+		return PD_NAN; // only to avoid a divide fault on x86
+	}
 	int x_negative=((signed_pd_internal)x)<0;
 	pseudo_double_i a=x_negative?pdi_neg(x):x;
 	int32_t ex=(int32_t)(a&EXP_MASK)-PSEUDO_DOUBLE_EXP_BIAS;
@@ -2282,6 +2294,9 @@ static inline int cbrt_cube_cmp(uint64_t mid, uint64_t t2, uint64_t t1) {
 pseudo_double_i pdi_cbrt(pseudo_double_i x) {
 	if(x==0) {
 		return 0;
+	}
+	if(pdi_is_nan(x)) {
+		return PD_NAN; // only to avoid a divide fault on x86
 	}
 	int x_negative=((signed_pd_internal)x)<0;
 	pseudo_double_i a=x_negative?pdi_neg(x):x;
@@ -3109,7 +3124,7 @@ int pdi_format_point(char* buf, size_t size, pseudo_double_i x, char conv, int p
 	int upper=(conv>='A' && conv<='Z');
 	char c=(char)(conv|0x20);
 	int alt=(flags&PD_FMT_ALT)!=0;
-	int negative=x!=PD_NAN && ((signed_pd_internal)x)<0;
+	int negative=!pdi_is_nan(x) && ((signed_pd_internal)x)<0;
 	if(negative) {
 		pd_out(&o,'-');
 	} else if(flags&PD_FMT_PLUS) {
@@ -3117,7 +3132,7 @@ int pdi_format_point(char* buf, size_t size, pseudo_double_i x, char conv, int p
 	} else if(flags&PD_FMT_SPACE) {
 		pd_out(&o,' ');
 	}
-	if(x==PD_NAN) {
+	if(pdi_is_nan(x)) {
 		const char* s=upper?"NAN":"nan";
 		while(*s) {
 			pd_out(&o,*s++);

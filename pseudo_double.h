@@ -168,7 +168,9 @@ static inline signed_pd_internal divs64hi(signed_pd_internal x,signed_pd_interna
 
 #define PSEUDO_DOUBLE_EXP_BIAS (1<<(PSEUDO_DOUBLE_EXP_BITS-1))
 #define PSEUDO_DOUBLE_HALF_ULP ((1ULL<<(PSEUDO_DOUBLE_EXP_BITS-1))-1)
-#define PD_NAN ((pseudo_double_i)(-1))
+// NaN is any word with a mantissa of -2^63 (never a valid number); PD_NAN is the one the library returns. Negation
+// and abs leave it unchanged. There is no checking of inputs: most functions given NaN return some value, not NaN
+#define PD_NAN ((pseudo_double_i)(0x8000000000000000ULL|EXP_MASK))
 
 #ifndef PD_ERROR_CHECK
 // Setting this to 0 will turn off most overflow/underflow/range checking and result in a tiny speed increase
@@ -205,14 +207,31 @@ static inline unsigned_pd_internal shift_left_unsigned(unsigned_pd_internal x, i
 	return x>>-shift;
 }
 
+static inline bool pdi_is_nan(pseudo_double_i x) {
+	return (x&EXP_MASK_INV)==0x8000000000000000ULL;
+}
+
 static inline pseudo_double_i pdi_neg(pseudo_double_i x) {
-	return (pseudo_double_i)(-(signed_pd_internal)(x&EXP_MASK_INV))+(x&EXP_MASK);
+	return (pseudo_double_i)(0-(x&EXP_MASK_INV))+(x&EXP_MASK);
 }
 
 static inline pseudo_double_i pdi_abs(pseudo_double_i x) {
-	signed_pd_internal m=(signed_pd_internal)(x&EXP_MASK_INV);
-	signed_pd_internal s=m>>(PSEUDO_DOUBLE_TOTAL_BITS-1);
+	unsigned_pd_internal m=x&EXP_MASK_INV;
+	unsigned_pd_internal s=0-(m>>(PSEUDO_DOUBLE_TOTAL_BITS-1));
 	return (pseudo_double_i)((m^s)-s)+(x&EXP_MASK);
+}
+
+// Converts a raw value stored by version 1 of this library. Only negative powers of two and NaN are encoded
+// differently (version 1 normalised negative powers of two to a -2^63 mantissa, and its NaN was all ones). Leaves
+// version 2 values unchanged, so it is safe on anything loaded
+static inline pseudo_double_i pdi_from_v1(pseudo_double_i x) {
+	if(x==(pseudo_double_i)-1) {
+		return PD_NAN;
+	}
+	if((x&EXP_MASK_INV)!=0x8000000000000000ULL || (x&EXP_MASK)==EXP_MASK) {
+		return x;                                                      // (the most negative version 1 value becomes NaN)
+	}
+	return 0xC000000000000000ULL+(x&EXP_MASK)+1;
 }
 
 static inline pseudo_double_i pdi_max(pseudo_double_i x, pseudo_double_i y) {
@@ -529,10 +548,9 @@ int pdi_format_point(char* buf, size_t size, pseudo_double_i x, char conv, int p
 // the shortest string that reads back as x with string_to_pdi (32 bytes is always enough)
 int pdi_to_string(char* buf, size_t size, pseudo_double_i x);
 
-/* =========================================================================================================================================================================
- * below this line is the C wrapper
- * =========================================================================================================================================================================
- */
+//=========================================================================================================================================================================
+// below this line is the C wrapper
+//=========================================================================================================================================================================
 
 typedef struct {
 	pseudo_double_i val;
@@ -546,6 +564,8 @@ static inline pseudo_double create_pseudo_double_from_internal(pseudo_double_i x
 
 static inline pseudo_double pd_neg(pseudo_double x) {return create_pseudo_double_from_internal(pdi_neg(x.val));}
 static inline pseudo_double pd_abs(pseudo_double x) {return create_pseudo_double_from_internal(pdi_abs(x.val));}
+static inline bool pd_is_nan(pseudo_double x) {return pdi_is_nan(x.val);}
+static inline pseudo_double pd_from_v1(pseudo_double x) {return create_pseudo_double_from_internal(pdi_from_v1(x.val));}
 static inline bool pd_gt(pseudo_double x, pseudo_double y) {return pdi_gt(x.val,y.val);}
 static inline bool pd_gte(pseudo_double x, pseudo_double y) {return pdi_gte(x.val,y.val);}
 static inline pseudo_double pd_max(pseudo_double x, pseudo_double y) {return create_pseudo_double_from_internal(pdi_max(x.val,y.val));}
